@@ -6,5 +6,5 @@ build-std-features = ["compiler-builtins-mem"]
 target = "x86-unknown-none.json"
 rustflags = [
     # "-C", "link-arg=-Tlink.ld", # see build.rs
-    "-C", "relocation-model=pie",
+    "-C", "relocation-model=pic",
 ]

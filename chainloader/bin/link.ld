@@ -19,6 +19,7 @@ PHDRS
 
 SECTIONS {
 
+    /* Binary is relocatable. Note: We want a 2 MiB alignment for huge pages. */
     .loader 2M : AT(2M) ALIGN(4K)
     {
         KEEP(*(.multiboot2_header));

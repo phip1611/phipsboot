@@ -19,7 +19,7 @@ set +e
 qemu-system-x86_64 \
     -boot d \
     -cdrom "$BOOT_IMAGE" \
-    -m 24m \
+    -m 8m \
     -debugcon stdio \
     -no-reboot \
     -device isa-debug-exit,iobase=0xf4,iosize=0x04
@@ -31,9 +31,9 @@ QEMU_EXIT_SUCCESS=73
 
 echo "#######################################"
 if [[ $EXIT_CODE -eq $QEMU_EXIT_SUCCESS ]]; then
-    echo "SUCCESS - Integration Test 'multiboot2'"
+    echo "SUCCESS - Integration Test"
     exit 0
 else
-    echo "FAILED - Integration Test 'multiboot2'"
+    echo "FAILED - Integration Test"
     exit "$EXIT_CODE"
 fi
