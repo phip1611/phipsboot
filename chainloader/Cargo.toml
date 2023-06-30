@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = [
+    "bin",
+    "lib",
+]
+
+[profile.dev]
+# opt-level = "s" # size optimization
+panic = "abort"
+
+[profile.release]
+codegen-units = 1
+lto = true
+# opt-level = "s" # size optimization
+opt-level = 1
+# strip = "debuginfo"
+debug = true
+panic = "abort"

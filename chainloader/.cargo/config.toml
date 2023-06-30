@@ -1,0 +1,19 @@
+# [unstable]
+# build-std = ["core", "alloc", "compiler_builtins"]
+# build-std-features = ["compiler-builtins-mem"]
+
+# [build]
+# target = "x86_64-unknown-none.json"
+
+[target."x86_64-unknown-none.json"]
+
+rustflags = [
+    # We set up page tables anyway, hence, we do not need position indepentent
+    # Rust code. The boot code itself (written in Assembly) stays unaffected
+    # by this. Hence, no relocation information are created which are ignored
+    # by GRUB anyway.
+    "-C", "relocation-model=static",
+
+    # "-C", "linker=ld", # sometimes helpful for better error messages
+    # "-C", "link-arg=-M", # print memory link map: only works with GNU ld
+]
