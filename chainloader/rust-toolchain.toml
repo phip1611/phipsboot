@@ -1,0 +1,7 @@
+# https://rust-lang.github.io/rustup/overrides.html
+
+[toolchain]
+# Rust nightly 1.72
+channel = "nightly-2023-06-28"
+components = [ "rust-src", "rust-std", "rustc", "cargo", "clippy", "rustfmt", "miri" ]
+targets = [ "x86_64-unknown-none" ]
