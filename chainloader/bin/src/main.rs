@@ -16,56 +16,79 @@ extern "C" fn rust_entry(
     multiboot2_information_ptr: u32,
     load_addr_offset: u32,
 ) -> ! {
-    unsafe {
-        core::arch::asm!(
-            "",
-            in("eax") 0xdeadbeef_u32,
-            in("ebx") multiboot2_magic,
-            in("ecx") multiboot2_information_ptr,
-            in("edx") load_addr_offset,
-            options(att_syntax)
-        );
-    }
+    let _ = Printer.write_str("Hello World from Rust Entry\n");
+    // I manually verified that all of the above values are passed correctly.
+    // Even in the relocated case.
+
+    // The next test case verifies that the stack works:
 
     // 0 + 1 + 2 + 3 should equal 6
     let sum_via_stacked_function_calls = a(0);
-    Printer.write_str("0 + 1 + 2 + 3 = ");
+    let _ = Printer.write_str("0 + 1 + 2 + 3 = ");
     unsafe { x86::io::outb(0xe9, b'0' + sum_via_stacked_function_calls) }
-    Printer.write_str("\n");
+    let _ = Printer.write_str("\n");
+
+    // This text case verifies that .rodata symbols can be read even when things
+    // were relocated.
+
+    let val = unsafe { core::ptr::read_volatile("rodata symbols can be read".as_ptr()) };
+    assert_eq!(val, b'r');
+
+    // Output some helpful stuff.
+    // This works as non of the code using formatting magic.
+    {
+        // print MB2 Magic
+        let _ = Printer.write_str("\nMBI magic: ");
+        let mut buf = [0; 10];
+        let str_to_print = u32_to_hex_string_in_buf(multiboot2_magic, &mut buf);
+        let _ = Printer.write_str(str_to_print);
+
+        let _ = Printer.write_str("\nMBI pointer: ");
+        let mut buf = [0; 10];
+        let str_to_print = u32_to_hex_string_in_buf(multiboot2_information_ptr, &mut buf);
+        let _ = Printer.write_str(str_to_print);
+
+        let _ = Printer.write_str("\nLoad Offset: ");
+        let mut buf = [0; 10];
+        let str_to_print = u32_to_hex_string_in_buf(load_addr_offset, &mut buf);
+        let _ = Printer.write_str(str_to_print);
+
+        let _ = Printer.write_str("\nExpected Runtime Address (start symbol): ");
+        let mut buf = [0; 10];
+        /*extern "C" {
+            #[link_name = "start"]
+            static mut START_SYMBOL: u32;
+        }
+        //let start_symbol_addr = unsafe { core::ptr::addr_of!(START_SYM) } as u32;
+        // let start_symbol_addr = unsafe { &START_SYMBOL as *const u32 } as u32;*/
+        let start_symbol_addr = 0x200080; // taken from objdump
+        let str_to_print = u32_to_hex_string_in_buf(start_symbol_addr, &mut buf);
+        let _ = Printer.write_str(str_to_print);
+
+        let _ = Printer.write_str("\nReal Runtime Address (start symbol): ");
+        let addr = start_symbol_addr + load_addr_offset;
+        let mut buf = [0; 10];
+        let str_to_print = u32_to_hex_string_in_buf(addr, &mut buf);
+        let _ = Printer.write_str(str_to_print);
+
+        let _ = Printer.write_str("\n");
+    }
 
 
-    let val = unsafe { core::ptr::read_volatile("foo".as_ptr()) };
-    assert_eq!(val, b'f');
+    // Now, this here breaks everything and starts a weird loop as something
+    // statically jumps back to the 2MiB address range (should be 6 Mib because
+    // of the relocation)
 
-    // print MB2 Magic
-    Printer.write_str("\nMBI magic: ");
-    let mut buf = [0; 10];
-    let str_to_print = u32_to_hex_string_in_buf(multiboot2_magic, &mut buf);
-    Printer.write_str(str_to_print);
 
-    Printer.write_str("\nMBI pointer: ");
-    let mut buf = [0; 10];
-    let str_to_print = u32_to_hex_string_in_buf(multiboot2_information_ptr, &mut buf);
-    Printer.write_str(str_to_print);
-
-    Printer.write_str("\nLoad Offset: ");
-    let mut buf = [0; 10];
-    let str_to_print = u32_to_hex_string_in_buf(load_addr_offset, &mut buf);
-    Printer.write_str(str_to_print);
-    Printer.write_str("\n");
+    // Helper to find the problematic code in assembly.
+    unsafe {
+        core::arch::asm!("", in("eax") 0xdeadbeef_u32);
+    }
 
     // TODO I have to figure out why this breaks everything.
     let x = format_args!("hello");
-    Printer.write_fmt(x);
+    let _ = Printer.write_fmt(x);
 
-    loop {}
-
-    loop {}
-
-    let x = format_args!("hello");
-    unsafe { x86::io::outb(0xe9, b'\n') };
-    Printer.write_fmt(x);
-    writeln!(Printer, "hello world").unwrap();
     loop {}
 }
 

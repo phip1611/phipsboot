@@ -11,8 +11,6 @@
 
 .global start
 start:
-    cli
-
     # Find relocation offset
     # We use the MBI memory as temporary stack for call-pop trick to get IP.
     # We know that the relocation offset is a multiple of 2 MiB due our
