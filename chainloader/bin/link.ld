@@ -1,5 +1,12 @@
 ENTRY(start)
 
+/*
+ * FORMAT: It's hard to find the right names for this. Keyword: bfdname.
+ * Also see GNU ld's source.
+ */
+OUTPUT_FORMAT("elf32-i386")
+OUTPUT_ARCH("i386")
+
 /* Program headers. Also called segments. */
 PHDRS
 {
