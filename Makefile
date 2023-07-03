@@ -1,9 +1,6 @@
 export PROJECT_ROOT      	= $(PWD)
 export CHAINLOADER_ARTIFACT = $(PROJECT_ROOT)/chainloader/target/x86-unknown-none/release/bin
 
-# TODO probably not needed
-export RUSTFLAGS = -C relocation-model=pic
-
 .PHONY: default
 default: bin
 
