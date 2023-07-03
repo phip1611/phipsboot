@@ -3,7 +3,7 @@
 # Multiboot2 Header definition.
 
 .align 8
-.section .multiboot2_header
+.section .mb2_hdr, "a", @progbits
 
                         .align 8 /* Header must be 8-byte aligned. */
 multiboot2_hdr_start:   .long   0xe85250d6

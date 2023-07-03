@@ -21,16 +21,28 @@ PHDRS
      * the AMD64 EFI machine state.
      */
 
-    loader     PT_LOAD FLAGS(7); /* 0b111 - read + write + execute */
+    loader     PT_LOAD      FLAGS(7); /* 0b111 - +read +write +execute */
+
+    /* dynamic    PT_DYNAMIC   FLAGS(6); *//* 0b110 - +read +write -execute */
 }
 
 SECTIONS {
 
     /* Binary is relocatable. Note: We want a 2 MiB alignment for huge pages. */
-    .loader 2M : AT(2M) ALIGN(4K)
+    .mb2_hdr 2M : AT(2M) ALIGN(4K)
     {
-        KEEP(*(.multiboot2_header));
+        KEEP(*(.mb2_hdr));
+    } : loader
 
+    /*
+     * Linker is friendly enough to automatically increase link and load address
+     * according to the size of the previous section. So no need to specify it
+     * for every output section. This is true for GNU ld and lld (LLVM).
+     */
+
+
+    .loader :
+    {
         *(.text .text.*)
 
         *(.rodata .rodata.*)
