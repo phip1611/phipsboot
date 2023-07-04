@@ -18,6 +18,7 @@ BOOT_IMAGE="grub_boot.img"
 set +e
 qemu-system-x86_64 \
     `#-s -S` \
+    "-d" "int,cpu_reset" \
     -boot d \
     -cdrom "$BOOT_IMAGE" \
     -m 8m \

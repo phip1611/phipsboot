@@ -11,37 +11,34 @@ OUTPUT_ARCH("i386")
 PHDRS
 {
     /*
-     * PT_LOAD FLAGS(x):
-     * The flags of an ELF program header/segment. Always 32 bit long, even for
-     * 64-bit ELFs. Also called "Segment Permissions" in ELF specification or
-     * "p_flags". Helps loaders of ELF files to set the right page table bits.
-     *
-     * Only needed in case that a Multiboot2 boot loader such as GRUB is used
-     * on an UEFI system. In that case, paging is already active if we land in
-     * the AMD64 EFI machine state.
+     * FLAGS:
+     * - 0b111 - +read +write +execute
+     * - Strictly speaking irrelevant in legacy boot.
      */
-
-    loader     PT_LOAD      FLAGS(7); /* 0b111 - +read +write +execute */
-
-    /* dynamic    PT_DYNAMIC   FLAGS(6); *//* 0b110 - +read +write -execute */
+    boot  PT_LOAD FLAGS(7);
+    loader PT_LOAD FLAGS(7);
 }
+
+LINK_ADDR_BOOT = 2M;
+LOAD_ADDR_BOOT = LINK_ADDR_BOOT;
+
+LINK_ADDR_LOADER = 1024M + SIZEOF(.boot);
+LOAD_ADDR_LOADER = LOADADDR(.boot) + SIZEOF(.boot);
 
 SECTIONS {
 
-    /* Binary is relocatable. Note: We want a 2 MiB alignment for huge pages. */
-    .mb2_hdr 2M : AT(2M) ALIGN(4K)
-    {
+    /*
+     * All symbols from the assembly code.
+     */
+    .boot LINK_ADDR_BOOT : AT(LOAD_ADDR_BOOT) {
+        *(.boot .boot.*)
         KEEP(*(.mb2_hdr));
-    } : loader
+    } : boot
 
     /*
-     * Linker is friendly enough to automatically increase link and load address
-     * according to the size of the previous section. So no need to specify it
-     * for every output section. This is true for GNU ld and lld (LLVM).
+     * All symbols from the high-level Rust code.
      */
-
-
-    .loader :
+    .loader LINK_ADDR_LOADER : AT(LOAD_ADDR_LOADER)
     {
         *(.text .text.*)
 
@@ -54,12 +51,21 @@ SECTIONS {
         *(.data .data.*)
     } : loader
 
+    /*
+     * General assertions:
+     * - Make sure that one single 2 MiB mapping covers the whole loader.
+     */
+    ASSERT(SIZEOF(.loader) < 2M, "The loader must be less than 2 MiB in size in memory")
+
     /DISCARD/ :
     {
-        *(.note.*)
         *(.comment .comment.*)
+        *(.dynamic)
         *(.eh_frame*)
         *(.got .got.*)
+        *(.note.*)
+        *(.plt .plt.*)
+        *(.rela .rela.*)
     }
 
 }

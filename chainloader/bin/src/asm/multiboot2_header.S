@@ -46,16 +46,6 @@ multiboot2_hdr_start:   .long   0xe85250d6
                         .long  21
                         .Linformation_request_end:
 
-                        /* relocatable tag */
-                        .align 8
-                        .word   0xa /* type */
-                        .word   0x1 /* flags: optional */
-                        .long   0x18 /* size */
-                        .long   0x200000 /* 2 MiB minimum load address. */
-                        .long   0xc0000000 /* 3 GiB maximum load address. */
-                        .long   0x200000 /* 2 MiB huge page alignment */
-                        .long   2 /* prefer high */
-
                         /* end tag */
                         .align 8
                         .word   0x0 /* type */
