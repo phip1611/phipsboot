@@ -4,8 +4,8 @@ ENTRY(start)
  * FORMAT: It's hard to find the right names for this. Keyword: bfdname.
  * Also see GNU ld's source.
  */
-OUTPUT_FORMAT("elf32-i386")
-OUTPUT_ARCH("i386")
+/*OUTPUT_FORMAT("elf32-i386")
+OUTPUT_ARCH("i386")*/
 
 /* Program headers. Also called segments. */
 PHDRS
@@ -15,7 +15,7 @@ PHDRS
      * - 0b111 - +read +write +execute
      * - Strictly speaking irrelevant in legacy boot.
      */
-    boot  PT_LOAD FLAGS(7);
+    boot   PT_LOAD FLAGS(7);
     loader PT_LOAD FLAGS(7);
 }
 
@@ -31,8 +31,9 @@ SECTIONS {
      * All symbols from the assembly code.
      */
     .boot LINK_ADDR_BOOT : AT(LOAD_ADDR_BOOT) {
-        *(.boot .boot.*)
+        *(.boot.text)
         KEEP(*(.mb2_hdr));
+        *(.boot.data)
     } : boot
 
     /*

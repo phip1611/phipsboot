@@ -1,5 +1,5 @@
 export PROJECT_ROOT      	= $(PWD)
-export CHAINLOADER_ARTIFACT = $(PROJECT_ROOT)/chainloader/target/x86-unknown-none/release/bin
+export CHAINLOADER_ARTIFACT = $(PROJECT_ROOT)/chainloader/target/x86_64-unknown-none/release/bin
 
 .PHONY: default
 default: bin
