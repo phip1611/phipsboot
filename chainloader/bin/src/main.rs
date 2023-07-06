@@ -5,19 +5,44 @@
 // extern crate alloc;
 
 mod asm;
+mod stack;
+pub(crate) mod extern_symbols;
+mod mem;
 
-use crate::debugcon::Printer;
+pub(crate) use crate::debugcon::Printer;
 use core::fmt::Write;
 use core::panic::PanicInfo;
 
-/// Entry into the high-level code of the loader in 32-bit mode with PAE paging.
+/// Entry into the high-level code of the loader.
+///
+/// # Machine State
+/// - 64-bit long mode with 4-level paging
+/// - `CR0` has the following bits set: PE (0), WP (1), PG (31)
+/// - `CR3` holds the physical address of the root page table
+/// - `CR4` has the following bits set: PAE (5)
+///
+/// # Paging
+/// The hole loader is reachable via its link address (2 MiB mapping) and via
+/// an identity mapping of the physical location in memory.
 #[no_mangle]
 extern "C" fn rust_entry(
-    load_addr_offset: u32,
+    multiboot2_magic: u64,
+    multiboot2_ptr: u64,
+    load_addr_offset: u64,
 ) -> ! {
     let _ = Printer.write_str("Hello World from Rust Entry\n");
+    let _ = writeln!(Printer, "magic: {:#x?}, ptr: {:#x?}, load_addr_offset: {:#x?}", multiboot2_magic, multiboot2_ptr, load_addr_offset);
+
+    // stack::assert_canary(load_addr_offset);
+
+    // break_stack(load_addr_offset);
 
     loop {}
+}
+
+fn break_stack(load_addr_offset: u64) {
+    stack::assert_canary(load_addr_offset);
+    break_stack(load_addr_offset);
 }
 
 #[panic_handler]

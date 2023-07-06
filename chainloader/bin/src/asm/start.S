@@ -13,38 +13,41 @@
 # way, the loader can cope with relocations when it is loaded by a Multiboot2
 # loader (such as GRUB).
 # Where necessary, instructions are patched to cope with relocations.
+#
+# Register Usage:
+# - %ebx stays intact to keep the MBI address.
+# - %ebp will contain the load address offset during runtime
+# - %esp will stay unused to prevent accidental stack usage
+# - all other 32-bit registers can be used as general purpose registers
 .global start
 start:
-    # Find relocation offset
-    #
-    # We use the MBI memory as temporary stack for call-pop trick to get IP.
-    # We know that the relocation offset is a multiple of 2 MiB due our
-    # alignment requirement specified in the MB2 header.
-
-    mov     (%ebx), %ecx    # save first 4 MBI bytes
-    mov     %ebx,   %esp
-    call    1f
-    1: pop     %edx
-    sub     $1b,    %edx    # %edx now contains load offset that can be added to
-                            # link addresses to get the actual address
-    mov     %ecx,   (%ebx)  # restore first 4 MBI bytes
+    # #############################################################
+    # Clear interrupts. They should never be activated at this point anyway.
+    cli
 
     # #############################################################
-    # Prepare stack
-
-    mov     $stack_end,    %esp    # set stack end (stack grows downwards)
-    sub     $16,           %esp    # 16-byte stack alignment on x86
-    add     $8,            %esp    # the first parameter that is passed via the
-                                   # stack must be 16-byte aligned
-    add     %edx,          %esp    # apply relocation offset to get actual stack
-    mov     %esp,          %ebp    # set stack frame (important on i386)
+    # Assert Multiboot2 handoff
+    cmp  $MULTIBOOT2_MAGIC,  %eax
+    je   0f # jump on success
+    mov  $0xbadb001, %eax
+    ud2  # crash system
+    0:
+    # flow continues..
 
     # #############################################################
-    # Save %eax (MB2 Magic) and %ebx (MBI) on stack to free registers.
-    # Now, all 32-bit registers are usable except for %edx, which holds the
-    # load offset.
-    push    %eax
-    push    %ebx
+    # Find relocation offset and store it in %ebp
+
+    mov   (%ebx), %eax   # Save first 4 bytes of MBI.
+    mov   %ebx,   %esp   # Use MBI (= valid RAM) as temporary stack.
+    call  1f             # call-pop trick -> get instruction pointer
+    1:
+    pop  %ebp
+    sub  $1b,     %ebp   # %ebp now contains load offset (i32, i.e., pos or neg)
+                         # that can be added to known (link = load address)-
+                         # addresses to get the actual address.
+    mov  %eax,    (%ebx) # Restore first 4 bytes of MBI.
+
+    mov  $0,      %esp   # Prevent usage of stack by accident.
 
     # #############################################################
     # Prepare page tables
@@ -86,54 +89,33 @@ start:
     # page fault after the update of %cr0.
 
     M_RESOLVE_RUNTIME_ADDR  boot_mem_page_table_l4, %eax
-    mov     %eax,   %cr3 # load root page table
+    mov  %eax, %cr3 # set root page table
 
-    # Save relocation offset. This register is clobbered by rdmsr.
-    push %edx
-
-    mov     $MSR_IA32_EFER_REG,    %ecx
-    # reads the lower 32-bits of MSR behind %ecx into %eax. The higher
-    # 32-bits are read into %edx.
-    rdmsr
-
-    # Enable 64-bit long mode.
-    or      $MSR_IA32_EFER_LME,    %eax
-    wrmsr
-
-    # Restore relocation offset.
-    pop %edx
+    M_SET_MSR_BITS  MSR_IA32_EFER_REG MSR_IA32_EFER_LME
 
     # Set paging properties.
     # Unlike for 32-bit paging, the CR4.PSE bit is not required for huge pages.
-    mov     %cr4,      %eax
-    or      $CR4_PAE,  %eax
-    mov     %eax,      %cr4
+    M_SET_CR_BITS %cr4, CR4_PAE
 
-    # Activate paging.
-    mov     %cr0,      %eax
-    or      $CR0_BITS, %eax
-    mov     %eax,      %cr0
+    # Finally activate paging.
+    M_SET_CR_BITS %cr0, CR0_BITS
 
-    # Now, we are in 64-bit compatibility mode with 4-level paging.
-    # Next, we need a far jump/long jump into 64-bit mode.
+    # Now, we are in 64-bit compatibility mode with 4-level paging. The code
+    # running right now is identity mapped.
 
     # #############################################################
     # Far jump (ljmp) into 64-bit mode.
 
-    # Restore previously saved values. Don't clobber these registers now!
-    pop %ebx
-    pop %eax
-
     # Update ldgdt input data with relocation offset and load GDT.
-    M_RESOLVE_RUNTIME_ADDR gdt,     %edi
-    M_RESOLVE_RUNTIME_ADDR gdt_ptr, %esi
-    mov %edi, (%esi)
-    M_RESOLVE_RUNTIME_ADDR ldt_gdt_data, %edi
-    lgdt    (%edi)
+    M_RESOLVE_RUNTIME_ADDR  gdt,             %eax
+    M_RESOLVE_RUNTIME_ADDR  gdt_ptr,         %ebx
+    mov                     %eax,            (%ebx)
+    M_RESOLVE_RUNTIME_ADDR ldt_gdt_data,     %eax
+    lgdt                                     (%eax)
 
-    M_RESOLVE_RUNTIME_ADDR bit64_trampoline, %edi
-    M_RESOLVE_RUNTIME_ADDR ljmp_dest,        %esi
-    mov %edi, (%esi)
+    M_RESOLVE_RUNTIME_ADDR bit64_trampoline, %eax
+    M_RESOLVE_RUNTIME_ADDR ljmp_dest,        %ebx
+    mov                     %eax,            (%ebx)
 
     # Equal to something like "ljmp $8:label" but constructed at runtime.
     # Required, as ljmp needs an absolute address.
@@ -144,19 +126,29 @@ start:
     # #############################################################
     # 64-bit trampoline
     #
-    # Prepare function arguments for rust entry
+    # Prepare entry into Rust code:
+    # - setup stack
+    # - prepare function arguments
 .code64
 bit64_trampoline:
+    # Setup stack + write stack canary
+    xor  %rsp, %rsp
+    M_RESOLVE_RUNTIME_ADDR  stack_end, %esp
+    movl  $0x13371337, -(stack_end - stack_begin - 4)(%rsp) # write canary 1/2
+    movl  $0xdeadbeef, -(stack_end - stack_begin)(%rsp)      # write canary 2/2
+    sub   $16,  %rsp # stack top is exclusive; prepare 16-byte stack alignment
+    add   $8,   %rsp # 16-byte stack alignment on x86 of first parameter
+    mov   %rsp, %rbp # set stack frame (probably useless on x86_64)
 
     # SystemV ABI / x86_64 calling convention:
-    xor     %edi, %edi
-    xor     %esi, %esi
-    mov     %rax, %rdi # MB2 magic
-    mov     %rbx, %rsi # MBI pointer
+    xor   %rdi, %rdi
+    xor   %rsi, %rsi
+    mov   %rbx, %rsi # 1st: MBI pointer
+    movsx %ebp, %rdx # 2nd: Load offset: sign extend if negative
 
-    mov     $rust_entry, %rax
-    # Absolute jump to link address of high-level code.
-    call    *%rax
+    mov  $rust_entry, %rax
+    jmp  *%rax # Absolute jump to link address of high-level code.
+
     ud2
 
 

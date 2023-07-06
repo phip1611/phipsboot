@@ -4,7 +4,7 @@
 
 # The register address of the MSR_IA32_EFER register.
 .set MSR_IA32_EFER_REG, (0xc0000080)
-# Bit that turns on 64-bit (IA32e - extended) mode.
+# Long mode enable bit.
 .set MSR_IA32_EFER_LME, (1 << 8)
 
 
@@ -18,3 +18,5 @@
 
 # op-code of the "ljmp" instruction.
 .set X86_LJMP, 0xea
+
+.set MULTIBOOT2_MAGIC, 0x36d76289
