@@ -1,36 +1,32 @@
-# Calculates the real load address from the link address of a known symbol and
-# stores it in the provided register. It relies on the relocation offset already
-# was already set in %edx.
-#
-# Input Register:
-#  - %edx - must contain the load offset
-# Parameters:
-#  - link_addr: Link address by its symbol name.
-#  - reg_out: Register where the output is stored.
-# Outputs:
-#  - The register behind the parameter 'reg_out' will contain the result.
-# Clobbers: rflags, reg_out
+# The assembly file uses GNU Assembly (GAS) language with AT&T syntax.
+
+/*
+ * Calculates the real load address from the link address of a known symbol and
+ * stores it in the provided register. It relies on the relocation offset already
+ * was already set in %ebp.
+ *
+ * This only works for symbols of the boot code, where link = load address.
+ *
+ * Clobbers: rflags, reg_out
+ */
 .macro  M_RESOLVE_RUNTIME_ADDR  link_addr reg_out
     mov  $\link_addr,  \reg_out
     add  %ebp,         \reg_out
 .endm
 
-
-# Computes the page table offset for a virtual address with x86_64 4-level
-# paging. The
-# function returns the byte offset and not the number of the entry
-# (nr of entry = offset / 4).
-#
-# For simplicity, this function only operates with 32-bit addresses. Hence,
-# bits 63..32 are assumed to be all zero.
-#
-# Inputs:
-#  - level    : 1, 2, 3, or 4
-#  - vaddr_reg: Register that contains the virtual address to be mapped.
-#  - reg_out  : Register where the output is stored.
-# Outputs:
-#   - The register behind the parameter 'reg_out' will contain the result.
-# Clobbers: reg_out
+/*
+ * Computes the page table offset for a virtual address with x86_64 4-level
+ * paging. The function returns the byte offset and not the number of the entry
+ * (nr of entry = offset / 4).
+ *
+ * The virtual address must be provided in %eax. The offset will then be stored
+ * in %eax.
+ *
+ * For simplicity, this function only operates with 32-bit addresses. Hence,
+ * bits 63..32 are assumed to be all zero.
+ *
+ * Clobbers: rflags, %eax
+*/
 .macro  _M_CALC_PT_ENTRY_OFFSET  level
     # Compile-time checks for the level.
     .if \level < 1
@@ -62,6 +58,8 @@
 
 /*
  * Calculates the offset into the page table for the given address.
+ *
+ * Clobbers: rflags, %eax
  */
 .macro  M_CALC_PT_ENTRY_OFFSET  level, vaddr
     mov  $\vaddr, %eax
@@ -72,6 +70,8 @@
 /*
  * Calculates the offset into the page table for the given address but applies
  * the relocation offset to the address beforehand.
+ *
+ * Clobbers: rflags, %eax
  */
 .macro  M_CALC_PT_ENTRY_OFFSET_RELOC  level, vaddr
     M_RESOLVE_RUNTIME_ADDR   \vaddr, %eax
@@ -79,25 +79,33 @@
 .endm
 
 
+/*
+ * Writes a page-table entry. The offset to the entry into the page table
+ * must be provided in %eax.
+ *
+ * Clobbers: rflags, %eax, %ebx
+ */
 .macro  _M_CREATE_PT_ENTRY  curr_phys, dest_phys, entry_flags
     # Address of current page tabel entry = base addr + offset
-    M_RESOLVE_RUNTIME_ADDR  \curr_phys, %ecx
-    add  %eax, %ecx # add entry offset
+    M_RESOLVE_RUNTIME_ADDR  \curr_phys, %ebx
+    add  %eax, %ebx # add entry offset
 
     # Page table entry = target phys address + flags
     M_RESOLVE_RUNTIME_ADDR  \dest_phys, %eax
     or  $(\entry_flags & 0xfff), %eax
 
     # Write lower 32-bit of 64-bit page table entry
-    mov  %eax, (%ecx)
+    mov  %eax, (%ebx)
 
     # Write upper half: stays zero (just to be sure).
-    movl  $0, +4(%ecx)
+    movl  $0, +4(%ebx)
 .endm
 
 
 /*
  * Create a page-table entry for the given address.
+ *
+ * Clobbers: rflags, %eax, %ebx
  */
 .macro  M_CREATE_PT_ENTRY  vaddr, level, curr_phys, dest_phys, entry_flags
     M_CALC_PT_ENTRY_OFFSET  \level \vaddr
@@ -109,6 +117,7 @@
  * Create a page-table entry for the given address but applies the relocation
  * offset to the address beforehand.
  *
+ * Clobbers: rflags, %eax, %ebx
  */
 .macro  M_CREATE_PT_ENTRY_RELOC  vaddr, level, curr_phys, dest_phys, entry_flags
     M_CALC_PT_ENTRY_OFFSET_RELOC  \level \vaddr
@@ -118,6 +127,8 @@
 
 /*
  * Adds the given bits to the given control register.
+ *
+ * Clobbers: %eax, reg_cr
  */
 .macro  M_SET_CR_BITS  reg_cr, bits
     mov  \reg_cr, %eax
@@ -129,14 +140,13 @@
 /*
  * Adds the given bits to the given MSR. Only uses the lower 32-bits.
  *
- * Clobbers: %ecx, %edx, %eax
+ * Clobbers: %eax, %ecx, %edx, msr
  */
 .macro  M_SET_MSR_BITS  msr, bits
     mov  $\msr, %ecx
-    # reads the lower 32-bits of MSR behind %ecx into %eax. The higher
+    # Reads the lower 32-bits of MSR behind %ecx into %eax. The higher
     # 32-bits are read into %edx.
     rdmsr
-    # Enable 64-bit long mode.
     or   $\bits, %eax
     wrmsr
 .endm

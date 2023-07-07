@@ -1,3 +1,5 @@
+# The assembly file uses GNU Assembly (GAS) language with AT&T syntax.
+
 # Variables for the assembler file.
 # Unfortunately, they end up as symbols in the final ELF's symbol table.
 # This has no real downside, however.

@@ -58,7 +58,7 @@ start:
     #
     # Structure:
     # L4 Table ---> L3 Table ---> L2 Table ("Lo") --> 2 MiB identity mapping
-    #                        \--> L2 Table ("Hi") --> 2 MiB high-level code mapping
+    #                        \--> L2 Table ("Hi") --> 2 MiB Rust code mapping
     #
     # Note: This mapping highly depends on LINK_ADDR_LOADER.
 
