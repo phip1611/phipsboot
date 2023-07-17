@@ -1,11 +1,14 @@
 ENTRY(start)
 
 /*
+ * Produce ELF32 file but with 64-bit code. This only affects the header
+ * info of the ELF but not the content. GRUB only loads ELF32 files.
+ *
  * FORMAT: It's hard to find the right names for this. Keyword: bfdname.
  * Also see GNU ld's source.
  */
-/*OUTPUT_FORMAT("elf32-i386")
-OUTPUT_ARCH("i386")*/
+OUTPUT_FORMAT("elf64-x86-64")
+OUTPUT_ARCH("i386")
 
 /* Program headers. Also called segments. */
 PHDRS
@@ -54,9 +57,9 @@ SECTIONS {
 
     /*
      * General assertions:
-     * - Make sure that one single 2 MiB mapping covers the whole loader.
+     * Make sure that one single 2 MiB mapping covers the whole loader.
      */
-    ASSERT(SIZEOF(.loader) < 2M, "The loader must be less than 2 MiB in size in memory")
+    ASSERT((SIZEOF(.boot) + SIZEOF(.loader)) < 2M, "The loader must be less than 2 MiB in size in memory")
 
     /DISCARD/ :
     {
