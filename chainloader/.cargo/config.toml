@@ -5,4 +5,6 @@ rustflags = [
     # Rust code. The boot code itself (written in Assembly) stays unaffected
     # from this.
     "-C", "relocation-model=static",
+    # "-C", "linker=ld",
+    # "-C", "link-arg=-M",
 ]

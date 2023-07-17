@@ -17,10 +17,10 @@ pub fn sanity_checks() {
 /// the end of the stack.
 pub fn assert_canary(load_addr_offset: u64) {
     unsafe {
-        let _ = writeln!(Printer, "STACK_BEGIN = {:#x?}, STACK_END = {:#x?}, LEN = {:#x?}", extern_symbols::stack_begin_link_addr().add(load_addr_offset as usize), extern_symbols::stack_end_link_addr().add(load_addr_offset as usize), len());
+        let _ = writeln!(Printer, "STACK_BEGIN = {:#x?}, STACK_END = {:#x?}, LEN = {:#x?}", extern_symbols::stack_begin().add(load_addr_offset as usize), extern_symbols::stack_end().add(load_addr_offset as usize), len());
     }
 
-    let slice = unsafe { core::slice::from_raw_parts(extern_symbols::stack_begin_link_addr().add(load_addr_offset as usize).cast::<u32>(), len() / 4) };
+    let slice = unsafe { core::slice::from_raw_parts(extern_symbols::stack_begin().add(load_addr_offset as usize).cast::<u32>(), len() / 4) };
     for (i, &byte) in slice.iter().enumerate() {
         if byte != 0 {
             let _ = writeln!(Printer, "stack != 0 at {:x?} => {:x?}", i, byte);
@@ -31,14 +31,14 @@ pub fn assert_canary(load_addr_offset: u64) {
 }
 
 fn len() -> usize {
-    let begin = extern_symbols::stack_begin_link_addr() as usize;
-    let end = extern_symbols::stack_end_link_addr() as usize;
+    let begin = extern_symbols::stack_begin() as usize;
+    let end = extern_symbols::stack_end() as usize;
     assert!(end > begin);
     end - begin
 }
 
 fn canary(load_addr_offset: u64) -> u32 {
-    let addr = unsafe { extern_symbols::stack_begin_link_addr().add(load_addr_offset as usize) };
+    let addr = unsafe { extern_symbols::stack_begin().add(load_addr_offset as usize) };
     let addr = addr.cast::<u32>();
     *unsafe { &*addr }
 }

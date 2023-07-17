@@ -12,6 +12,7 @@ mod mem;
 pub(crate) use crate::debugcon::Printer;
 use core::fmt::Write;
 use core::panic::PanicInfo;
+use core::str::FromStr;
 
 /// Entry into the high-level code of the loader.
 ///
@@ -30,8 +31,13 @@ extern "C" fn rust_entry(
     multiboot2_ptr: u64,
     load_addr_offset: u64,
 ) -> ! {
+    init(multiboot2_magic, multiboot2_ptr, load_addr_offset);
     let _ = Printer.write_str("Hello World from Rust Entry\n");
     let _ = writeln!(Printer, "magic: {:#x?}, ptr: {:#x?}, load_addr_offset: {:#x?}", multiboot2_magic, multiboot2_ptr, load_addr_offset);
+    let _ = writeln!(Printer, "stack_begin: {:#?}, end_begin: {:#?}", extern_symbols::stack_begin(), extern_symbols::stack_end());
+
+    // let x = lib::cli::CliArgs::from_str("").unwrap();
+    //let _x = core::hint::black_box(x);
 
     // stack::assert_canary(load_addr_offset);
 
@@ -43,6 +49,13 @@ extern "C" fn rust_entry(
 fn break_stack(load_addr_offset: u64) {
     stack::assert_canary(load_addr_offset);
     break_stack(load_addr_offset);
+}
+
+fn init(
+    multiboot2_magic: u64,
+    multiboot2_ptr: u64,
+    load_addr_offset: u64,) {
+    mem::init(load_addr_offset);
 }
 
 #[panic_handler]
