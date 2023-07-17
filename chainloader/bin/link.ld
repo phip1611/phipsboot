@@ -59,7 +59,7 @@ SECTIONS {
      * General assertions:
      * Make sure that one single 2 MiB mapping covers the whole loader.
      */
-    ASSERT((SIZEOF(.boot) + SIZEOF(.loader)) < 2M, "The loader must be less than 2 MiB in size in memory")
+    ASSERT((SIZEOF(.boot) + SIZEOF(.loader)) <= 2M, "The loader must be less than 2 MiB in size in memory")
 
     /DISCARD/ :
     {
