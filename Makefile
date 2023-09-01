@@ -3,7 +3,7 @@ export PROJECT_ROOT      	= $(PWD)
 export RELEASE             ?= release
 export CHAINLOADER_ARTIFACT = $(PROJECT_ROOT)/chainloader/target/x86_64-unknown-none/$(RELEASE)/bin
 
-export CARGO_BIN_FLAGS = --target x86_64-unknown-none.json -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem
+export CARGO_BIN_FLAGS = --target x86_64-unknown-none
 
 .PHONY: default
 default: bin
