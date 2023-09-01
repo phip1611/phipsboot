@@ -77,9 +77,9 @@ start:
 
     # The symbol LINK_ADDR_LOADER is not available here for non-lazy
     # evaluation of the virtual address inside the macro.
-    M_CREATE_PT_ENTRY  0x100000000, 4, boot_mem_page_table_l4, boot_mem_page_table_l3, 0x3
-    M_CREATE_PT_ENTRY  0x100000000, 3, boot_mem_page_table_l3, boot_mem_page_table_l2_hi, 0x3
-    M_CREATE_PT_ENTRY  0x100000000, 2, boot_mem_page_table_l2_hi, 0x200000, 0x83
+    M_CREATE_PT_ENTRY  0xffffffff88200000, 4, boot_mem_page_table_l4, boot_mem_page_table_l3, 0x3
+    M_CREATE_PT_ENTRY  0xffffffff88200000, 3, boot_mem_page_table_l3, boot_mem_page_table_l2_hi, 0x3
+    M_CREATE_PT_ENTRY  0xffffffff88200000, 2, boot_mem_page_table_l2_hi, 0x200000, 0x83
 
     # #############################################################
     # Enable paging

@@ -3,4 +3,5 @@
 [toolchain]
 # Rust nightly 1.74
 channel = "nightly-2023-08-31"
-components = [ "rust-src", "rust-std", "rustc", "cargo", "clippy", "rustfmt", "miri" ]
+components = [ "rust-std", "rustc", "cargo", "clippy", "rustfmt", "miri" ]
+targets = [ "x86_64-unknown-none" ]
