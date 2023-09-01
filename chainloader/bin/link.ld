@@ -1,14 +1,11 @@
 ENTRY(start)
 
 /*
- * Produce ELF32 file but with 64-bit code. This only affects the header
- * info of the ELF but not the content. GRUB only loads ELF32 files.
- *
  * FORMAT: It's hard to find the right names for this. Keyword: bfdname.
  * Also see GNU ld's source.
  */
 OUTPUT_FORMAT("elf64-x86-64")
-OUTPUT_ARCH("i386")
+OUTPUT_ARCH("i386:x86-64")
 
 /* Program headers. Also called segments. */
 PHDRS
@@ -16,16 +13,17 @@ PHDRS
     /*
      * FLAGS:
      * - 0b111 - +read +write +execute
-     * - Strictly speaking irrelevant in legacy boot.
+     * - Strictly speaking irrelevant in legacy boot but technically the right
+     *   desription of those segments.
      */
     boot   PT_LOAD FLAGS(7);
     loader PT_LOAD FLAGS(7);
 }
 
-LINK_ADDR_BOOT = 2M;
+LINK_ADDR_BOOT = 0x200000;
 LOAD_ADDR_BOOT = LINK_ADDR_BOOT;
 
-LINK_ADDR_LOADER = 1024M + SIZEOF(.boot);
+LINK_ADDR_LOADER = 0x100000000 /* 4 GiB */ + SIZEOF(.boot);
 LOAD_ADDR_LOADER = LOADADDR(.boot) + SIZEOF(.boot);
 
 SECTIONS {

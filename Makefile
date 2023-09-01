@@ -6,12 +6,12 @@ default: bin
 
 .PHONY: bin
 bin:
-	cd chainloader && cargo build --release
+	cd chainloader && cargo build --release --target x86_64-unknown-none.json -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem
 	grub-file --is-x86-multiboot2 "$(CHAINLOADER_ARTIFACT)"
 
 .PHONY: test
 test:
-	cd chainloader && cargo nextest run --lib --target x86_64-unknown-linux-gnu
+	cd chainloader && cargo nextest run --lib
 
 .PHONY: integration-test
 integration-test: bin

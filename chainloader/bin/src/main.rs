@@ -34,8 +34,19 @@ extern "C" fn rust_entry(
     init(multiboot2_magic, multiboot2_ptr, load_addr_offset);
     let _ = Printer.write_str("Hello World from Rust Entry\n");
     let _ = writeln!(Printer, "magic: {:#x?}, ptr: {:#x?}, load_addr_offset: {:#x?}", multiboot2_magic, multiboot2_ptr, load_addr_offset);
-    let _ = writeln!(Printer, "stack_begin: {:#?}, end_begin: {:#?}", extern_symbols::stack_begin(), extern_symbols::stack_end());
 
+    let _ = writeln!(Printer, "stack_top   : {:#?}", stack::top());
+    let _ = writeln!(Printer, "stack_bottom: {:#?}", stack::bottom());
+    let _ = writeln!(Printer, "current stack canary: {:#x}", stack::current_canary());
+    let _ = writeln!(Printer, "current stack usage: {:#x}", stack::current_usage());
+    // let _ = writeln!(Printer, "link_addr_boot: {:#x?}", ());
+
+    /*let _ = writeln!(Printer, "foobar");
+    let stack_begin2 = unsafe {extern_symbols::symbols::bootcode::STACK_BEGIN};
+    let _ = writeln!(Printer, "stack_begin: {:#?}", stack_begin2.as_ptr());
+    let _ = writeln!(Printer, "stack_begin: {:#?}", stack_begin());*/
+    //let x = link_addr_loader() + 5;
+    //let _y = core::hint::black_box(x);
     // let x = lib::cli::CliArgs::from_str("").unwrap();
     //let _x = core::hint::black_box(x);
 
@@ -43,13 +54,14 @@ extern "C" fn rust_entry(
 
     // break_stack(load_addr_offset);
 
+    stack::sanity_checks();
     loop {}
 }
-
+/*
 fn break_stack(load_addr_offset: u64) {
     stack::assert_canary(load_addr_offset);
     break_stack(load_addr_offset);
-}
+}*/
 
 fn init(
     multiboot2_magic: u64,
@@ -61,6 +73,10 @@ fn init(
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {
     let _ = writeln!(Printer, "PANIC: {info:#?}");
+    unsafe {
+        // TODO only do this when no logging is initialized
+        core::arch::asm!("ud2");
+    }
     loop {}
 }
 

@@ -1,44 +1,94 @@
-use core::fmt::{Debug, Write};
 use crate::debugcon::Printer;
 use crate::extern_symbols;
+use core::fmt::{Debug, Write};
+use core::ops::{Deref, DerefMut};
+use lib::safe::Safe;
 
-const CANARY: u32 = 0xdeadbeef;
+/// Size of the stack in bytes.
+pub const SIZE: usize = 0x10000 /* 64 KiB */;
 
-pub struct StackDescriptor {
-    pub virt_addr: u64,
-    pub phys_addr: u64,
+/// Canary value at the bottom of the stack to detect overflows.
+const CANARY: u64 = 0x13371337_deadbeef;
+
+/// Backing memory for the stack. This is mutable and lands in the `.data`
+/// section.
+#[link_section = ".data"] // ensure this is r/w and not r/o.
+static STACK: Stack<SIZE> = Stack::new();
+
+/// Exclusive address of the stack top.
+#[used]
+#[no_mangle]
+static STACK_TOP: Safe<*const u8> = Safe::new(STACK.top());
+
+/// Properly aligned type holding backing memory for stack.
+#[repr(C, align(16))]
+struct Stack<const N: usize>([u8; N]);
+
+impl<const Size: usize> Stack<Size> {
+    const fn new() -> Self {
+        Self([0; Size])
+    }
+
+    const fn top(&self) -> *mut u8 {
+        unsafe { self.bottom().add(Size) }
+    }
+
+    const fn bottom(&self) -> *mut u8 {
+        self.0.as_ptr().cast_mut()
+    }
 }
 
+/// Initializes the stack.
+pub fn init() {
+    write_canary();
+}
+
+/// Sanity checks for the stack. Verifies:
+/// - canary
+/// - stack pointer not out of bounds
 pub fn sanity_checks() {
-
-}
-
-/// Assert there was no stack-overflow yet by checking a fixed canary value at
-/// the end of the stack.
-pub fn assert_canary(load_addr_offset: u64) {
+    assert_eq!(current_canary(), CANARY);
+    let current_rsp: u64;
     unsafe {
-        let _ = writeln!(Printer, "STACK_BEGIN = {:#x?}, STACK_END = {:#x?}, LEN = {:#x?}", extern_symbols::stack_begin().add(load_addr_offset as usize), extern_symbols::stack_end().add(load_addr_offset as usize), len());
-    }
-
-    let slice = unsafe { core::slice::from_raw_parts(extern_symbols::stack_begin().add(load_addr_offset as usize).cast::<u32>(), len() / 4) };
-    for (i, &byte) in slice.iter().enumerate() {
-        if byte != 0 {
-            let _ = writeln!(Printer, "stack != 0 at {:x?} => {:x?}", i, byte);
-        }
-    }
-
-    assert_eq!(CANARY, canary(load_addr_offset));
+        core::arch::asm!("mov %rsp, %rax", out("rax") current_rsp, options(att_syntax))
+    };
+    assert!(current_rsp < STACK.top() as u64);
+    assert!(current_rsp >= STACK.bottom() as u64);
 }
 
-fn len() -> usize {
-    let begin = extern_symbols::stack_begin() as usize;
-    let end = extern_symbols::stack_end() as usize;
-    assert!(end > begin);
-    end - begin
+/// Returns the exclusive top of the stack.
+pub fn top() -> *const u8 {
+    STACK.top()
 }
 
-fn canary(load_addr_offset: u64) -> u32 {
-    let addr = unsafe { extern_symbols::stack_begin().add(load_addr_offset as usize) };
-    let addr = addr.cast::<u32>();
-    *unsafe { &*addr }
+/// Returns the exclusive bottom of the stack.
+pub fn bottom() -> *const u8 {
+    STACK.bottom()
+}
+
+/// Returns the current stack usage in bytes.
+#[inline(never)]
+pub fn current_usage() -> u64 {
+    let current_rsp: u64;
+    unsafe {
+        core::arch::asm!("mov %rsp, %rax", out("rax") current_rsp, options(att_syntax))
+    };
+    STACK.top() as u64 - current_rsp
+}
+
+/// Writes the canary value of the stack. This should only be done once during
+/// initialization.
+fn write_canary() {
+    // volatile: needed as STACK is not "mut" for simplicity.
+    unsafe { core::ptr::write_volatile(canary_address(), CANARY); }
+}
+
+/// Returns the address of the canary at the bottom of the stack.
+fn canary_address() -> *mut u64 {
+    STACK.bottom().cast::<u64>()
+}
+
+pub fn current_canary() -> u64 {
+    // volatile: needed as STACK is not "mut" for simplicity.
+    unsafe { core::ptr::read_volatile(canary_address()) }
 }

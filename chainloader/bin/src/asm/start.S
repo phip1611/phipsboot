@@ -1,24 +1,25 @@
 # The assembly file uses GNU Assembly (GAS) language with AT&T syntax.
 
-# Entry code of the ELF binary. Look at "start" symbol for more information.
+# Entry of the bootloader. Look at "start" symbol for more information.
 
-# Symbol from main.rs
-.extern rust_entry
+.extern rust_entry STACK_TOP
 
 .code32
-.align 8
 .section .boot.text, "ax", @progbits
 
-# Entry into the loader. This "boot code" is fully position-indepentent. This
-# way, the loader can cope with relocations when it is loaded by a Multiboot2
-# loader (such as GRUB).
-# Where necessary, instructions are patched to cope with relocations.
+# Entry into the loader. This "boot code" is fully position-independent. This
+# way, the loader can cope with physical relocations when it is loaded by a
+# Multiboot2 loader (such as GRUB) even though the ELF file is a static
+# executable without any relocation information. Where necessary, instructions
+# are patched during runtime to cope with relocations.
 #
 # Register Usage:
-# - %ebx stays intact to keep the MBI address.
+# - %edi holds the Multiboot2 magic
+# - %esi holds the MBI address.
 # - %ebp will contain the load address offset during runtime
-# - %esp will stay unused to prevent accidental stack usage
-# - all other 32-bit registers can be used as general purpose registers
+# - %esp will be set to 0 prevent accidental stack usage in boot code
+#   (but will be initialized before jumping into Rust code)
+# - All other 32-bit registers can be used as general purpose registers
 .global start
 start:
     # #############################################################
@@ -35,6 +36,12 @@ start:
     # flow continues..
 
     # #############################################################
+    # Save Multiboot2 handoff parameters
+    # (%eax and %ebx are working registers in the following)
+    mov  %eax, %edi
+    mov  %ebx, %esi
+
+    # #############################################################
     # Find relocation offset and store it in %ebp
 
     mov   (%ebx), %eax   # Save first 4 bytes of MBI.
@@ -47,8 +54,6 @@ start:
                          # addresses to get the actual address.
     mov  %eax,    (%ebx) # Restore first 4 bytes of MBI.
 
-    mov  $0,      %esp   # Prevent usage of stack by accident.
-
     # #############################################################
     # Prepare page tables
     #
@@ -57,27 +62,24 @@ start:
     # - 0x83: present + writeable, huge page
     #
     # Structure:
-    # L4 Table ---> L3 Table ---> L2 Table ("Lo") --> 2 MiB identity mapping
-    #                        \--> L2 Table ("Hi") --> 2 MiB Rust code mapping
-    #
-    # Note: This mapping highly depends on LINK_ADDR_LOADER.
+    # L4 Table --> L3 Table ---> L2 Table --> 2 MiB identity mapping
 
-    # Step 1/2: Identity mapping of boot code
+    # Step 1/2: Identity mapping of actual load address.
 
-    # Map runtime address of LOAD_ADDR_BOOT to runtime address of
-    # this binary as one single 2 MiB huge page mapping.
-    M_CREATE_PT_ENTRY_RELOC  LOAD_ADDR_BOOT, 4, boot_mem_page_table_l4, boot_mem_page_table_l3, 0x3
-    M_CREATE_PT_ENTRY_RELOC  LOAD_ADDR_BOOT, 3, boot_mem_page_table_l3, boot_mem_page_table_l2_lo, 0x3
-    M_CREATE_PT_ENTRY_RELOC  LOAD_ADDR_BOOT, 2, boot_mem_page_table_l2_lo, LOAD_ADDR_BOOT, 0x83
+    M_CREATE_PT_ENTRY_RELOC  0x200000, 4, boot_mem_page_table_l4, boot_mem_page_table_l3, 0x3
+    M_CREATE_PT_ENTRY_RELOC  0x200000, 3, boot_mem_page_table_l3, boot_mem_page_table_l2_lo, 0x3
+    M_CREATE_PT_ENTRY_RELOC  0x200000, 2, boot_mem_page_table_l2_lo, 0x200000, 0x83
 
     # Step 2/2: High-level mapping of Rust code
 
     # Map virtual address LINK_ADDR_LOADER to runtime address of
     # this binary as one single 2 MiB huge page mapping.
 
-    M_CREATE_PT_ENTRY  LINK_ADDR_LOADER, 4, boot_mem_page_table_l4, boot_mem_page_table_l3, 0x3
-    M_CREATE_PT_ENTRY  LINK_ADDR_LOADER, 3, boot_mem_page_table_l3, boot_mem_page_table_l2_hi, 0x3
-    M_CREATE_PT_ENTRY  LINK_ADDR_LOADER, 2, boot_mem_page_table_l2_hi, LOAD_ADDR_BOOT, 0x83
+    # The symbol LINK_ADDR_LOADER is not available here for non-lazy
+    # evaluation of the virtual address inside the macro.
+    M_CREATE_PT_ENTRY  0x100000000, 4, boot_mem_page_table_l4, boot_mem_page_table_l3, 0x3
+    M_CREATE_PT_ENTRY  0x100000000, 3, boot_mem_page_table_l3, boot_mem_page_table_l2_hi, 0x3
+    M_CREATE_PT_ENTRY  0x100000000, 2, boot_mem_page_table_l2_hi, 0x200000, 0x83
 
     # #############################################################
     # Enable paging
@@ -126,27 +128,23 @@ start:
     # #############################################################
     # 64-bit trampoline
     #
-    # Prepare entry into Rust code:
-    # - setup stack
-    # - prepare function arguments
+    # Prepare entry into Rust code: prepare function arguments
 .code64
 bit64_trampoline:
-    # Setup stack + write stack canary
-    xor  %rsp, %rsp
-    M_RESOLVE_RUNTIME_ADDR  stack_end, %esp
-    movl  $0x13371337, -(stack_end - stack_begin - 4)(%rsp) # write canary 1/2
-    movl  $0xdeadbeef, -(stack_end - stack_begin)(%rsp)      # write canary 2/2
-    sub   $16,  %rsp # stack top is exclusive; prepare 16-byte stack alignment
-    add   $8,   %rsp # 16-byte stack alignment on x86 of first parameter
-    mov   %rsp, %rbp # set stack frame (probably useless on x86_64)
+    # #############################################################
+    # SystemV ABI x86_64 calling convention
+    # 1st in %rdi, 2nd in %rsi, 3nd in %rdx
 
-    # SystemV ABI / x86_64 calling convention:
-    xor   %rdi, %rdi
-    xor   %rsi, %rsi
-    mov   %rbx, %rsi # 1st: MBI pointer
-    movsx %ebp, %rdx # 2nd: Load offset: sign extend if negative
+    # Boot Magic and Boot Info Ptr are already in %rdi and %rsi
+    movsx  %ebp, %rdx  # 3rd param: Load offset: sign extend if negative
 
-    mov  $rust_entry, %rax
+    # Setup stack + write stack canary at end of stack
+    movabs  $STACK_TOP, %rsp
+    sub  $16,  %rsp  # stack top is exclusive; prepare 16-byte stack alignment
+    add  $8,   %rsp  # 16-byte stack alignment on x86 of first parameter
+    mov  %rsp, %rbp  # set stack frame (probably useless on x86_64)
+
+    movabs  $rust_entry, %rax
     jmp  *%rax # Absolute jump to link address of high-level code.
 
     ud2
@@ -176,6 +174,7 @@ gdt_end:
 
 # 4K 8-byte aligned stack for the whole loader.
 .align 16
+# TODO MOVE STACK TO Rust and high link address
 stack_begin:
     .zero 8192
 stack_end:
