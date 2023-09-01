@@ -21,7 +21,7 @@ qemu-system-x86_64 \
     "-d" "int,cpu_reset" \
     -boot d \
     -cdrom "$BOOT_IMAGE" \
-    -m 8m \
+    -m 32m \
     -debugcon stdio \
     -no-reboot \
     -device isa-debug-exit,iobase=0xf4,iosize=0x04
