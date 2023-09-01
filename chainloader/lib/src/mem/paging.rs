@@ -45,6 +45,18 @@ macro_rules! impl_addr {
                 val.0
             }
         }
+
+        impl From<i64> for $typ {
+            fn from(val: i64) -> Self {
+                Self::new(val as u64)
+            }
+        }
+
+        impl From<$typ> for i64 {
+            fn from(val: $typ) -> Self {
+                val.0 as i64
+            }
+        }
     };
 }
 

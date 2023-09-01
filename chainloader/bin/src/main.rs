@@ -5,8 +5,7 @@
 // extern crate alloc;
 
 mod asm;
-mod stack;
-pub(crate) mod extern_symbols;
+mod extern_symbols;
 mod mem;
 
 pub(crate) use crate::debugcon::Printer;
@@ -29,16 +28,23 @@ use core::str::FromStr;
 extern "C" fn rust_entry(
     multiboot2_magic: u64,
     multiboot2_ptr: u64,
-    load_addr_offset: u64,
+    load_addr_offset: i64,
 ) -> ! {
-    init(multiboot2_magic, multiboot2_ptr, load_addr_offset);
+    mem::init(load_addr_offset);
+
     let _ = Printer.write_str("Hello World from Rust Entry\n");
     let _ = writeln!(Printer, "magic: {:#x?}, ptr: {:#x?}, load_addr_offset: {:#x?}", multiboot2_magic, multiboot2_ptr, load_addr_offset);
 
-    let _ = writeln!(Printer, "stack_top   : {:#?}", stack::top());
-    let _ = writeln!(Printer, "stack_bottom: {:#?}", stack::bottom());
-    let _ = writeln!(Printer, "current stack canary: {:#x}", stack::current_canary());
-    let _ = writeln!(Printer, "current stack usage: {:#x}", stack::current_usage());
+    let _ = writeln!(Printer, "stack_top   : {:#?}", mem::stack::top());
+    let _ = writeln!(Printer, "stack_bottom: {:#?}", mem::stack::bottom());
+    let _ = writeln!(Printer, "current stack canary: {:#x}", mem::stack::current_canary());
+    let _ = writeln!(Printer, "current stack usage: {:#x}", mem::stack::current_usage());
+    let _ = writeln!(Printer, "foo={:#x}", a(7));
+    let _ = writeln!(Printer, "boot_mem_page_table_l4: {:#x}",  extern_symbols::boot_mem_page_table_l4());
+
+    // panic!("foo");
+    loop {}
+    /*let _ = writeln!(Printer, "link addr loader: {:#x}",  extern_symbols::link_addr_loader());*/
     // let _ = writeln!(Printer, "link_addr_boot: {:#x?}", ());
 
     /*let _ = writeln!(Printer, "foobar");
@@ -54,7 +60,7 @@ extern "C" fn rust_entry(
 
     // break_stack(load_addr_offset);
 
-    stack::sanity_checks();
+    mem::stack::assert_sanity_checks();
     loop {}
 }
 /*
@@ -63,12 +69,6 @@ fn break_stack(load_addr_offset: u64) {
     break_stack(load_addr_offset);
 }*/
 
-fn init(
-    multiboot2_magic: u64,
-    multiboot2_ptr: u64,
-    load_addr_offset: u64,) {
-    mem::init(load_addr_offset);
-}
 
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {

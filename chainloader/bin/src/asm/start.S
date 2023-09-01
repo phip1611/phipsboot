@@ -142,7 +142,6 @@ bit64_trampoline:
     movabs  $STACK_TOP, %rsp
     sub  $16,  %rsp  # stack top is exclusive; prepare 16-byte stack alignment
     add  $8,   %rsp  # 16-byte stack alignment on x86 of first parameter
-    mov  %rsp, %rbp  # set stack frame (probably useless on x86_64)
 
     movabs  $rust_entry, %rax
     jmp  *%rax # Absolute jump to link address of high-level code.
@@ -182,6 +181,7 @@ stack_end:
 # Page tables backing memory
 
 .align 4096
+.global boot_mem_page_table_l4
 boot_mem_page_table_l4:
     .zero 4096
 
