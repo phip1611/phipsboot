@@ -62,7 +62,8 @@ start:
     # - 0x83: present + writeable, huge page
     #
     # Structure:
-    # L4 Table --> L3 Table ---> L2 Table --> 2 MiB identity mapping
+    # L4 Table --> L3 Table (lo) ---> L2 Table (lo) --> 2 MiB identity mapping
+    #          \-> L3 Table (hi) ---> L2 Table (hi) --> 2 MiB identity mapping
 
     # Step 1/2: Identity mapping of actual load address.
 
@@ -75,7 +76,7 @@ start:
     # Map virtual address LINK_ADDR_LOADER to runtime address of
     # this binary as one single 2 MiB huge page mapping.
 
-    # The symbol LINK_ADDR_LOADER is not available here for non-lazy
+    # The symbol LINK_ADDR_LOADER is not available here for lazy
     # evaluation of the virtual address inside the macro.
     M_CREATE_PT_ENTRY  0xffffffff88200000, 4, boot_mem_page_table_l4, boot_mem_page_table_l3, 0x3
     M_CREATE_PT_ENTRY  0xffffffff88200000, 3, boot_mem_page_table_l3, boot_mem_page_table_l2_hi, 0x3
@@ -138,14 +139,11 @@ bit64_trampoline:
     # Boot Magic and Boot Info Ptr are already in %rdi and %rsi
     movsx  %ebp, %rdx  # 3rd param: Load offset: sign extend if negative
 
-    # Setup stack + write stack canary at end of stack
+    # Set stack
     movabs  $STACK_TOP, %rsp
-    sub  $16,  %rsp  # stack top is exclusive; prepare 16-byte stack alignment
-    add  $8,   %rsp  # 16-byte stack alignment on x86 of first parameter
 
     movabs  $rust_entry, %rax
     jmp  *%rax # Absolute jump to link address of high-level code.
-
     ud2
 
 
@@ -171,13 +169,6 @@ gdt:
     .long 0xa09b00 # 64bit CS CPL0
 gdt_end:
 
-# 4K 8-byte aligned stack for the whole loader.
-.align 16
-# TODO MOVE STACK TO Rust and high link address
-stack_begin:
-    .zero 8192
-stack_end:
-
 # Page tables backing memory
 
 .align 4096
@@ -186,6 +177,7 @@ boot_mem_page_table_l4:
     .zero 4096
 
 .align 4096
+.global boot_mem_page_table_l3
 boot_mem_page_table_l3:
     .zero 4096
 

@@ -37,8 +37,9 @@ extern "C" fn rust_entry(
 
     let _ = writeln!(Printer, "stack_top   : {:#?}", mem::stack::top());
     let _ = writeln!(Printer, "stack_bottom: {:#?}", mem::stack::bottom());
-    let _ = writeln!(Printer, "current stack canary: {:#x}", mem::stack::current_canary());
-    let _ = writeln!(Printer, "current stack usage: {:#x}", mem::stack::current_usage());
+    let _ = writeln!(Printer, "stack_size (usable): {:#?}", mem::stack::usable_size());
+    let _ = writeln!(Printer, "current stack canary: {:#x}", mem::stack::canary());
+    let _ = writeln!(Printer, "current stack usage: {:#x}", mem::stack::usage());
     let _ = writeln!(Printer, "foo={:#x}", a(7));
     let _ = writeln!(Printer, "boot_mem_page_table_l4: {:#x}",  extern_symbols::boot_mem_page_table_l4());
 

@@ -88,7 +88,7 @@ impl VirtAddr {
 }
 
 /// Creates one single 1 GiB mapping with rwx permissions.
-pub fn map_1g_rwx(src: VirtAddr, dest: PhysAddr, flags: u64) {
+fn map_single_entry(src: VirtAddr, dest: PhysAddr, flags: u64) {
 
 }
 
@@ -101,7 +101,7 @@ mod tests {
     /// results.
     #[test]
     fn page_table_index_and_offset() {
-        let addr = VirtAddr::from(0xdead_beef_1337_1337);
+        let addr = VirtAddr::from(0xdead_beef_1337_1337_u64);
         assert_eq!(addr.pt_index(Level::One), 369);
         assert_eq!(addr.pt_index(Level::Two), 153);
         assert_eq!(addr.pt_index(Level::Three), 444);
