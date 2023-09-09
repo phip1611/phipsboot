@@ -1,21 +1,27 @@
 //! Module for [`Safe`].
 
-use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut};
+use std::cell::RefCell;
 
-/// Smart pointer that marks the inner type as [`Send`] and [`Sync`]. This is
-/// safe for all usage in the context of this loader as it don't use SMP,
-/// interrupts, or any other form of concurrency.
+/// Smart pointer around [`RefCell`] that is [`Send`] and [`Sync`]. This type is
+/// safe for all usage in the context of this loader as the loader don't use
+/// SMP, interrupts, or any other form of concurrency.
 ///
-/// TODO: currently, this type allows multiple mutable references to the same
-///  underlying type!
+/// It is not suited for `const` accesses, as it performs borrow checks during
+/// runtime.
 #[derive(Debug)]
-pub struct Safe<T>(UnsafeCell<T>);
+pub struct Safe<T>(RefCell<T>);
 
 impl<T> Safe<T> {
     /// Constructor.
     pub const fn new(value: T) -> Self {
-        Self(UnsafeCell::new(value))
+        Self(RefCell::new(value))
+    }
+}
+
+impl<T: Default> Default for Safe<T> {
+    fn default() -> Self {
+        Safe::new(T::default())
     }
 }
 
@@ -23,36 +29,46 @@ unsafe impl<T> Send for Safe<T> {}
 unsafe impl<T> Sync for Safe<T> {}
 
 impl<T> Deref for Safe<T> {
-    type Target = T;
+    type Target = RefCell<T>;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*self.0.get() }
+        &self.0
     }
 }
 
 impl<T> DerefMut for Safe<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-       unsafe { &mut *self.0.get() }
+       &mut self.0
     }
 }
 
-/*struct SafeRef<'a> {
-
-} */
-
 #[cfg(test)]
 mod tests {
-    use alloc::string::String;
     use super::*;
 
     #[test]
-    fn test_safe() {
-        let mut foo = Safe::new(1337);
-        let read: &i32 = &foo;
-        assert_eq!(*read, 1337);
-        let write: &mut i32 = &mut foo;
-        *write = 0;
-        let read: &i32 = &foo;
-        assert_eq!(*read, 0);
+    fn test_basic() {
+        let foo = Safe::new(1337);
+        let read = *foo.borrow();
+        assert_eq!(read, 1337);
+        let mut write = foo.borrow_mut();
+        *write = 42;
+        assert_eq!(*write, 42);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_panic_multiple_writer() {
+        let foo = Safe::new(1337);
+        let _w1 = foo.borrow_mut();
+        let _w2 = foo.borrow_mut();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_panic_writer_and_reader() {
+        let foo = Safe::new(1337);
+        let _w = foo.borrow_mut();
+        let _r = foo.borrow();
     }
 }

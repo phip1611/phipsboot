@@ -71,7 +71,6 @@ impl FromStr for CliArgs {
 mod tests {
     use crate::cli::{CliArgs, SupportedLogger};
     use core::str::FromStr;
-    use std::dbg;
 
     #[test]
     fn test_cli_empty() {

@@ -26,19 +26,19 @@ pub struct Stack<const N: usize = DEFAULT_STACK_SIZE> {
     stack: [u8; N],
 }
 
-impl<const Size: usize> Stack<Size> {
+impl<const SIZE: usize> Stack<SIZE> {
     /// Constructs a new and properly aligned stack.
     pub const fn new() -> Self {
-        assert!(Size >= MIN_STACK_SIZE);
+        assert!(SIZE >= MIN_STACK_SIZE);
         Self {
             canary: CANARY,
-            stack: [0; Size],
+            stack: [0; SIZE],
         }
     }
 
     /// Returns the top of the usable stack.
     pub const fn top(&self) -> *mut u8 {
-        unsafe { self.bottom().add(Size) }
+        unsafe { self.bottom().add(SIZE) }
     }
 
     /// Returns the top address of the stack that is properly aligned.
@@ -46,8 +46,8 @@ impl<const Size: usize> Stack<Size> {
     /// stack pointer. This way, the first stack argument after the return
     /// address is aligned.
     pub const fn adjusted_top(&self) -> *mut u8 {
-        const FIRST_PARAMETER_OFFSET: u64 = 8;
-        unsafe { self.top().sub(ALIGNMENT).add(8) }
+        const FIRST_PARAMETER_OFFSET: usize = 8;
+        unsafe { self.top().sub(ALIGNMENT).add(FIRST_PARAMETER_OFFSET) }
     }
 
     /// Returns the bottom of the usable stack.

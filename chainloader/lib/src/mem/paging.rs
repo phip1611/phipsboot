@@ -88,7 +88,7 @@ impl VirtAddr {
 }
 
 /// Creates one single 1 GiB mapping with rwx permissions.
-fn map_single_entry(src: VirtAddr, dest: PhysAddr, flags: u64) {
+fn _map_single_entry(_src: VirtAddr, _dest: PhysAddr, _flags: u64) {
 
 }
 

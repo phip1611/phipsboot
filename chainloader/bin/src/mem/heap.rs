@@ -1,13 +1,15 @@
 //! Abstraction for managing memory of the system and the loader.
 
+/// Size of the heap.
+const SIZE: usize = 0x20000 /* 128 KiB */;
 
-pub(super) fn init() {
-}
-/*
+/// Backing memory for the heap.
+static mut HEAP: [u8; SIZE] = [0; SIZE];
 
-static mut HEAP: [u8; 4096] = [0; 4096];
-*/
 #[global_allocator]
-static ALLOC: good_memory_allocator::SpinLockedAllocator = good_memory_allocator::SpinLockedAllocator::empty();
+static ALLOC: good_memory_allocator::SpinLockedAllocator =
+    good_memory_allocator::SpinLockedAllocator::empty();
 
-
+pub fn init() {
+    unsafe { ALLOC.init(HEAP.as_ptr() as usize, SIZE) }
+}

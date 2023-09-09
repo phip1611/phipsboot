@@ -4,10 +4,13 @@
 
 // extern crate alloc;
 
+extern crate alloc;
+
 mod asm;
 mod extern_symbols;
 mod mem;
 
+use alloc::vec;
 pub(crate) use crate::debugcon::Printer;
 use core::fmt::Write;
 use core::panic::PanicInfo;
@@ -32,10 +35,12 @@ extern "C" fn rust_entry(
 ) -> ! {
     mem::init(load_addr_offset);
 
+    let vec = vec![1, 2, 3];
+
     let _ = Printer.write_str("Hello World from Rust Entry\n");
     let _ = writeln!(Printer, "magic: {:#x?}, ptr: {:#x?}, load_addr_offset: {:#x?}", multiboot2_magic, multiboot2_ptr, load_addr_offset);
-
     let _ = writeln!(Printer, "stack_top   : {:#?}", mem::stack::top());
+    let _ = writeln!(Printer, "vec   : {vec:#?}");
     let _ = writeln!(Printer, "stack_bottom: {:#?}", mem::stack::bottom());
     let _ = writeln!(Printer, "stack_size (usable): {:#?}", mem::stack::usable_size());
     let _ = writeln!(Printer, "current stack canary: {:#x}", mem::stack::canary());
