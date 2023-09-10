@@ -3,7 +3,7 @@
 
 use core::cell::OnceCell;
 use lib::mem::paging::{PhysAddr, VirtAddr};
-use lib::safe::Safe;
+use lib::safe::{Safe};
 
 pub mod stack;
 mod heap;

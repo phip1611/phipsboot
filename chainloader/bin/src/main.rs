@@ -1,6 +1,7 @@
 #![no_main]
 #![no_std]
-#![feature(error_in_core)]
+
+// #![feature(error_in_core)]
 
 // extern crate alloc;
 
@@ -9,12 +10,17 @@ extern crate alloc;
 mod asm;
 mod extern_symbols;
 mod mem;
+mod driver;
 
-use alloc::vec;
-pub(crate) use crate::debugcon::Printer;
+use alloc::string::String;
+use alloc::{format, vec};
+use alloc::vec::Vec;
 use core::fmt::Write;
+use core::hint::black_box;
 use core::panic::PanicInfo;
 use core::str::FromStr;
+use lib::logger;
+use crate::mem::stack;
 
 /// Entry into the high-level code of the loader.
 ///
@@ -34,10 +40,36 @@ extern "C" fn rust_entry(
     load_addr_offset: i64,
 ) -> ! {
     mem::init(load_addr_offset);
+    logger::init(); // logger depends on an enabled heap
+
+    /*unsafe {
+        core::arch::asm!("int3")
+    }*/
+    let x = a(10);
+    writeln!(&mut driver::DebugconLogger, "hello {} x={x}", "world");
+
+    let mut log_buf = String::new();
+    log_buf.push_str("first");
+    writeln!(&mut driver::DebugconLogger, "hello {} x={x}", "world");
+    log_buf.push_str("second");
+    writeln!(&mut driver::DebugconLogger, "{}", log_buf.as_str());
+    let _ = writeln!(&mut log_buf, "hello {}", "world");
+    driver::DebugconLogger.write_str(log_buf.as_str());
+    //log::info!("BEFORE Hello World from Rust entry");
+
+    loop {
+
+    }
+
+
+    logger::add_backend(driver::DebugconLogger::default()).unwrap();
+    logger::flush(); // flush all buffered messages
 
     let vec = vec![1, 2, 3];
 
-    let _ = Printer.write_str("Hello World from Rust Entry\n");
+    log::info!("AFTER Hello World from Rust entry");
+
+/*    let _ = Printer.write_str("Hello World from Rust Entry\n");
     let _ = writeln!(Printer, "magic: {:#x?}, ptr: {:#x?}, load_addr_offset: {:#x?}", multiboot2_magic, multiboot2_ptr, load_addr_offset);
     let _ = writeln!(Printer, "stack_top   : {:#?}", mem::stack::top());
     let _ = writeln!(Printer, "vec   : {vec:#?}");
@@ -46,7 +78,7 @@ extern "C" fn rust_entry(
     let _ = writeln!(Printer, "current stack canary: {:#x}", mem::stack::canary());
     let _ = writeln!(Printer, "current stack usage: {:#x}", mem::stack::usage());
     let _ = writeln!(Printer, "foo={:#x}", a(7));
-    let _ = writeln!(Printer, "boot_mem_page_table_l4: {:#x}",  extern_symbols::boot_mem_page_table_l4());
+    let _ = writeln!(Printer, "boot_mem_page_table_l4: {:#x}",  extern_symbols::boot_mem_page_table_l4());*/
 
     // panic!("foo");
     loop {}
@@ -78,10 +110,15 @@ fn break_stack(load_addr_offset: u64) {
 
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {
-    let _ = writeln!(Printer, "PANIC: {info:#?}");
+    // If a panic happens, we are screwed anyways. We do some additional
+    // emergency logging without the whole log-stack
+    let _ = writeln!(&mut driver::DebugconLogger, "PANIC: {info:#?}");
+
+    // log::error!("PANIC: {info:#?}");
+
     unsafe {
-        // TODO only do this when no logging is initialized
-        core::arch::asm!("ud2");
+        // TODO only do this when no logging is initialized?!
+        core::arch::asm!("ud2", in("rax") 0xbadb001);
     }
     loop {}
 }
@@ -122,25 +159,4 @@ fn u32_to_hex_string_in_buf(mut num: u32, buffer: &mut [u8; 10]) -> &str {
     buffer[1] = b'x';
 
     core::str::from_utf8(buffer).unwrap()
-}
-
-mod debugcon {
-    use super::*;
-
-    const QEMU_DEBUGCON_PORT: u16 = 0xe9;
-
-    pub struct Printer;
-
-    impl core::fmt::Write for Printer {
-        fn write_str(&mut self, s: &str) -> core::fmt::Result {
-            for byte in s.as_bytes() {
-                print_char(*byte);
-            }
-            Ok(())
-        }
-    }
-
-    fn print_char(c: u8) {
-        unsafe { x86::io::outb(QEMU_DEBUGCON_PORT, c) }
-    }
 }

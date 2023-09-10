@@ -1,10 +1,12 @@
 [target."x86_64-unknown-none"]
 
 rustflags = [
-    # We set up page tables anyway, hence, we do not need position indepentent
+    # We set up page tables anyway, hence, we do not need position independent
     # Rust code. The boot code itself (written in Assembly) stays unaffected
-    # by this. Hence, no relocation information are created which are ignored
-    # by GRUB anyway.
+    # by this. Hence, the ELF will not have relocation information. GRUB
+    # couldn't cope with them anyway when it chainloads this via Multiboot2.
+    # All other compilatino options are derived from the compiler target spec:
+    # https://github.com/rust-lang/rust/blob/master/compiler/rustc_target/src/spec/x86_64_unknown_none.rs
     "-C", "relocation-model=static",
 
     # "-C", "linker=ld", # sometimes helpful for better error messages

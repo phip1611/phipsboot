@@ -1,29 +1,32 @@
-use crate::debugcon::Printer;
-use crate::extern_symbols;
-use core::fmt::{Debug, Write};
-use core::ops::{Deref, DerefMut};
-use lib::mem::stack::{DEFAULT_STACK_SIZE, Stack};
+use core::fmt::{Debug};
+use lib::mem::stack::{Stack, DEFAULT_STACK_SIZE};
 use lib::safe::Safe;
 
 /// Backing memory for the stack. This is mutable and lands in the `.data`
 /// section.
+#[no_mangle] // Useful to find the stack location with readelf.
 static mut STACK: Stack<DEFAULT_STACK_SIZE> = Stack::new();
 
-/// Aligned ready-to-use top of the stack.
+/// Symbol that holds the pointer to the actual ready-to-use top of the stack.
+/// This gives the assembly code access to the correct link address.
 #[no_mangle]
-static STACK_TOP: Safe<*const u8> = Safe::new(unsafe { STACK.adjusted_top() });
+static STACK_TOP_PTR: Safe<*const u8> = Safe::new(unsafe { STACK.adjusted_top() });
 
-
-/// Initializes the stack.
+/// The stack is already initialized in the assembly routine. Otherwise, we
+/// wouldn't get here. We just do some sanity checks and log debug information
+/// about the stack.
 pub fn init() {
-
+    assert_sanity_checks();
 }
 
 /// Sanity checks for the stack. Verifies:
 /// - canary
 /// - stack pointer not out of bounds
+#[inline(never)]
 pub fn assert_sanity_checks() {
-    unsafe { assert_eq!(Ok(()), STACK.check_canary()); }
+    unsafe {
+        assert_eq!(Ok(()), STACK.check_canary());
+    }
     let current_rsp: u64;
     unsafe { core::arch::asm!("mov %rsp, %rax", out("rax") current_rsp, options(att_syntax)) };
     assert!(current_rsp < unsafe { STACK.top() } as u64);
@@ -34,7 +37,6 @@ pub fn assert_sanity_checks() {
 pub fn top() -> *mut u8 {
     unsafe { STACK.adjusted_top() }
 }
-
 
 /// Returns the usable size of the stack.
 pub fn usable_size() -> u64 {

@@ -36,7 +36,8 @@ impl<const SIZE: usize> Stack<SIZE> {
         }
     }
 
-    /// Returns the top of the usable stack.
+    /// Returns the exclusive top address of the stack.
+    #[inline(never)]
     pub const fn top(&self) -> *mut u8 {
         unsafe { self.bottom().add(SIZE) }
     }
@@ -45,22 +46,26 @@ impl<const SIZE: usize> Stack<SIZE> {
     /// On x86, the stack must be 16-byte aligned 8-byte under the current
     /// stack pointer. This way, the first stack argument after the return
     /// address is aligned.
+    #[inline(never)]
     pub const fn adjusted_top(&self) -> *mut u8 {
         const FIRST_PARAMETER_OFFSET: usize = 8;
         unsafe { self.top().sub(ALIGNMENT).add(FIRST_PARAMETER_OFFSET) }
     }
 
-    /// Returns the bottom of the usable stack.
+    /// Returns the inclusive bottom address of the usable stack.
+    #[inline(never)]
     pub const fn bottom(&self) -> *mut u8 {
         self.stack.as_ptr().cast_mut()
     }
 
     /// Returns the current canary.
+    #[inline(never)]
     pub const fn canary(&self) -> u64 {
         self.canary
     }
 
     /// Verifies if the canary is still correct.
+    #[inline(never)]
     pub fn check_canary(&self) -> Result<(), CanaryMissmatchError> {
         // volatile: make sure that compiler never optimizes this away
         let actual = unsafe { core::ptr::read_volatile(core::ptr::addr_of!(self.canary)) };
@@ -77,13 +82,13 @@ mod tests {
     use std::mem::{align_of, size_of};
 
     #[test]
-    fn test_abi() {
+    fn abi() {
         assert_eq!(align_of::<Stack>(), ALIGNMENT);
-        assert_eq!(size_of::<Stack<8>>(), size_of::<u64>() + 8);
+        assert_eq!(size_of::<Stack<8>>(), size_of::<u64>() + 8 * size_of::<u8>());
     }
 
     #[test]
-    fn test_stack() {
+    fn canary() {
         let mut stack: Stack = Stack::new();
         assert_eq!(Ok(()), stack.check_canary());
         stack.canary = 5;
@@ -96,6 +101,14 @@ mod tests {
         );
 
         assert!(stack.bottom() < stack.top());
+    }
+
+    #[test]
+    fn calculations() {
+        let stack = Stack::<1024>::new();
+        assert!(stack.bottom() < stack.top());
+        assert!(stack.adjusted_top() < stack.top());
+        assert_eq!(stack.bottom() as u64 + 1024, stack.top() as u64);
     }
 
     #[test]

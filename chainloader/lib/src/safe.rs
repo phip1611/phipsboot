@@ -1,46 +1,32 @@
 //! Module for [`Safe`].
 
-use core::ops::{Deref, DerefMut};
-use std::cell::RefCell;
+use core::ops::{Deref};
 
-/// Smart pointer around [`RefCell`] that is [`Send`] and [`Sync`]. This type is
-/// safe for all usage in the context of this loader as the loader don't use
-/// SMP, interrupts, or any other form of concurrency.
+/// Smart pointer that marks the inner type as [`Send`] and [`Sync`]. This is
+/// useful as wrapper for global statics, if the inner type alone is usually not
+/// allowed to be shared globally in standard Rust.
 ///
-/// It is not suited for `const` accesses, as it performs borrow checks during
-/// runtime.
-#[derive(Debug)]
-pub struct Safe<T>(RefCell<T>);
+/// This wrapper is safe in context of this loader, as there are no concurrent
+/// threads or interrupt handling, but just single-core execution.
+pub struct Safe<T>(T);
 
 impl<T> Safe<T> {
-    /// Constructor.
-    pub const fn new(value: T) -> Self {
-        Self(RefCell::new(value))
+    pub const fn new(t: T) -> Self {
+        Safe(t)
     }
 }
-
-impl<T: Default> Default for Safe<T> {
-    fn default() -> Self {
-        Safe::new(T::default())
-    }
-}
-
-unsafe impl<T> Send for Safe<T> {}
-unsafe impl<T> Sync for Safe<T> {}
 
 impl<T> Deref for Safe<T> {
-    type Target = RefCell<T>;
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<T> DerefMut for Safe<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-       &mut self.0
-    }
-}
+unsafe impl<T> Send for Safe<T> {}
+unsafe impl<T> Sync for Safe<T> {}
+
 
 #[cfg(test)]
 mod tests {
@@ -48,27 +34,7 @@ mod tests {
 
     #[test]
     fn test_basic() {
-        let foo = Safe::new(1337);
-        let read = *foo.borrow();
-        assert_eq!(read, 1337);
-        let mut write = foo.borrow_mut();
-        *write = 42;
-        assert_eq!(*write, 42);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_panic_multiple_writer() {
-        let foo = Safe::new(1337);
-        let _w1 = foo.borrow_mut();
-        let _w2 = foo.borrow_mut();
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_panic_writer_and_reader() {
-        let foo = Safe::new(1337);
-        let _w = foo.borrow_mut();
-        let _r = foo.borrow();
+        static FOO: Safe<*const u8> = Safe::new(0xdeadbeef_u32 as _);
+        assert_eq!(*FOO as u64, 0xdeadbeef);
     }
 }

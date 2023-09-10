@@ -1,9 +1,12 @@
 export PROJECT_ROOT      	= $(PWD)
+export CARGO_TARGET_DIR     = $(PWD)/target
+
 # release|debug
 export RELEASE             ?= release
-export CHAINLOADER_ARTIFACT = $(PROJECT_ROOT)/chainloader/target/x86_64-unknown-none/$(RELEASE)/bin
+export COMPILE_TARGET       = x86_64-unknown-none
+export CHAINLOADER_ARTIFACT = $(CARGO_TARGET_DIR)/${COMPILE_TARGET}/$(RELEASE)/bin
 
-export CARGO_BIN_FLAGS = --target x86_64-unknown-none
+export CARGO_BIN_FLAGS = --target $(COMPILE_TARGET)
 
 .PHONY: default
 default: bin

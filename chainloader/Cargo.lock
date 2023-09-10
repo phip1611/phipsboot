@@ -14,6 +14,7 @@ version = "0.1.0"
 dependencies = [
  "good_memory_allocator",
  "lib",
+ "log",
  "multiboot2",
  "x86",
 ]

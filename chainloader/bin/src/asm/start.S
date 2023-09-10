@@ -140,10 +140,10 @@ bit64_trampoline:
     movsx  %ebp, %rdx  # 3rd param: Load offset: sign extend if negative
 
     # Set stack
-    movabs  $STACK_TOP, %rsp
+    mov  (STACK_TOP_PTR), %rsp  # set the aligned stack top ptr as stack
 
     movabs  $rust_entry, %rax
-    jmp  *%rax # Absolute jump to link address of high-level code.
+    jmp  *%rax  # Absolute jump to link address of high-level code.
     ud2
 
 
@@ -166,7 +166,7 @@ gdt:
 
     # 64-bit code segment ring 0 selector
     .long 0
-    .long 0xa09b00 # 64bit CS CPL0
+    .long 0xa09b00
 gdt_end:
 
 # Page tables backing memory
