@@ -20,5 +20,3 @@
 
 # op-code of the "ljmp" instruction.
 .set X86_LJMP, 0xea
-
-.set MULTIBOOT2_MAGIC, 0x36d76289

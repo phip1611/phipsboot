@@ -45,11 +45,11 @@ extern "C" fn rust_entry(
     /*unsafe {
         core::arch::asm!("int3")
     }*/
-    let x = a(10);
-    writeln!(&mut driver::DebugconLogger, "hello {} x={x}", "world");
+    writeln!(&mut driver::DebugconLogger, "hello {}", "world");
 
     let mut log_buf = String::new();
     log_buf.push_str("first");
+    let x = a(10);
     writeln!(&mut driver::DebugconLogger, "hello {} x={x}", "world");
     log_buf.push_str("second");
     writeln!(&mut driver::DebugconLogger, "{}", log_buf.as_str());

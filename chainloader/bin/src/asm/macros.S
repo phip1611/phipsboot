@@ -1,4 +1,7 @@
 # The assembly file uses GNU Assembly (GAS) language with AT&T syntax.
+#
+# All macros provided here operate on 32-bit registers and are meant to be used
+# to prepare the transition to 64-bit mode.
 
 /*
  * Calculates the real load address from the link address of a known symbol and
@@ -20,11 +23,11 @@
  * (nr of entry = offset / 4).
  *
  * The upper 32-bits of the virtual address must be provided in %eax and the
- # lower 32-bits in %ebx. The offset will then be stored in %eax.
+ * lower 32-bits in %ebx. The offset will then be stored in %eax.
  *
  * Clobbers: rflags, %eax
  */
-.macro  _M_CALC_PT_ENTRY_OFFSET  level
+.macro  M_CALC_PT_ENTRY_OFFSET  level
     # Compile-time checks for the level.
     .if \level < 1
         .error "Level must be 1, 2, 3, or 4."
@@ -59,78 +62,121 @@
 .endm
 
 
-/*
- * Calculates the offset into the page table for the given level and 64-bit
- * virtual address.
+
+####################################################################
+
+/**
+ * Maps a LOAD segment with information stored behind `mapping_info_ptr` into
+ * memory. If the level is one, it does so in a loop until all pages are mapepd.
  *
- * Clobbers: rflags, %eax
+ * This code relies on the fact that the whole LOAD segment can be loaded into
+ * a single PT, i.e., that the highest index is 512. Or in other words, the LOAD
+ * segment must not cross a 2MiB address boundary.
+ *
+ * Clobbers: rflags, %eax, %ebx, %ecx, %edx, %esp
  */
-.macro  M_CALC_PT_ENTRY_OFFSET  level, vaddr
-    mov  $((\vaddr >> 32) & 0xffffffff), %eax
-    mov  $(\vaddr & 0xffffffff), %ebx
-    _M_CALC_PT_ENTRY_OFFSET  \level
+.macro M_MAP_HIGH_ADDR level, mapping_info_ptr, phys_table, phys_dest, flags
+    M_RESOLVE_RUNTIME_ADDR  \mapping_info_ptr %esp
+    mov  4(%esp), %eax  # vaddr (bits 63..32)
+    mov   (%esp), %ebx  # vaddr (bits 31..0)
+
+    mov  %ebx,  %ecx
+    M_CALC_PT_ENTRY_OFFSET \level
+    mov  %ecx,  %ebx
+
+    # now: %eax holds the PT offset
+    #      %ebx holds addr bits 31..0
+
+    .if \level > 1
+        M_RESOLVE_RUNTIME_ADDR \phys_table %ebx
+
+        # entry in %edx
+        M_RESOLVE_RUNTIME_ADDR \phys_dest %edx
+        or  $(\flags & 0xfff), %edx
+
+        M_WRITE_PT_ENTRY %edx %ebx %eax
+    .endif
+    .if \level == 1
+        mov  8(%esp), %esp  # num of pages
+
+        # %eax now contains the PT offset
+        # %ebx contains addr bits 31..0
+
+        # Calculate phys addr of the current load segment:
+        # 1) First, we get the runtime addr of the base addr (LOAD_ADDR_BOOT)
+        # 2) We then apply the same offset to the phys addr that the virt
+        #    segment addr has from its base
+        M_RESOLVE_RUNTIME_ADDR \phys_dest %edx
+        mov  %ebx, %ecx
+        and  $(0x1ff000), %ebx
+        add  %ebx,  %edx
+        or   $(\flags & 0xfff), %edx
+        # now: %ebx and %edx have the same offset from the 2 MiB-aligned base
+
+        0:
+            cmp  $0, %esp
+            je   1f
+
+            M_RESOLVE_RUNTIME_ADDR \phys_table %ecx
+
+            M_WRITE_PT_ENTRY %edx %ecx %eax
+
+            dec  %esp
+            add  $8,    %eax  # increase offset into PT
+            add  $4096, %ebx  # next page; add to addr bits 31..0
+            jo   2f # Add above assumes that overflows will never happen!
+            add  $4096, %edx  # increase phys mem offset from base
+            jmp  0b
+        2:  ud2
+        1:
+    .endif
+
 .endm
 
-/*
- * Calculates the offset into the page table for the given address but applies
- * the relocation offset to the address beforehand.
+/**
+ * Takes a 32-bit symbol, calculates its actual runtime adress, and maps the
+ * virtual address for the given level and the given flags.
  *
- * Clobbers: rflags, %eax
+ * # Parameters
+ * - level:      1, 2, 3, or 4
+ * - vaddr:      32-bit symbol
+ * - phys_table: 32-bit symbol
+ * - phys_dest:  32-bit symbol
+ * - flags:      12-bit immediate describing the flags (entry bits 11..0)
+ *
+ * Clobbers: rflags, %eax, %ebx, %edx
  */
-.macro  M_CALC_PT_ENTRY_OFFSET_RELOC  level, vaddr
-    M_RESOLVE_RUNTIME_ADDR   \vaddr, %ebx
-    mov  $0, %eax  # only used in 32-bit world anyway
-    _M_CALC_PT_ENTRY_OFFSET  \level
+.macro M_MAP_SYMBOL32  level, vaddr, phys_table, phys_dest, flags
+    M_RESOLVE_RUNTIME_ADDR \vaddr %ebx
+    xor  %eax, %eax # zero upper 32-bits
+    M_CALC_PT_ENTRY_OFFSET  \level
+
+    # now: %eax holds the PT offset, %ebx can be used again
+
+    M_RESOLVE_RUNTIME_ADDR \phys_table %ebx
+
+    # entry in %edx
+    M_RESOLVE_RUNTIME_ADDR \phys_dest %edx
+    or  $(\flags & 0xfff), %edx
+
+    M_WRITE_PT_ENTRY %edx %ebx %eax
+.endm
+
+/**
+ * Writes a single page table entry.
+ *
+ * Clobbers: rflags, reg_phys_table
+ */
+.macro M_WRITE_PT_ENTRY  reg_entry_31_0, reg_phys_table, reg_offset
+    add  \reg_offset,       \reg_phys_table
+    mov  \reg_entry_31_0,   (\reg_phys_table)
+
+    # for completeness; all physical addresses are in 32-bit range anyway
+    movl  $0, 4(\reg_phys_table)
 .endm
 
 
-/*
- * Writes a page-table entry. The offset to the entry into the page table
- * must be provided in %eax.
- *
- * Clobbers: rflags, %eax, %ebx
- */
-.macro  _M_CREATE_PT_ENTRY  curr_phys, dest_phys, entry_flags
-    # Address of current page tabel entry = base addr + offset
-    M_RESOLVE_RUNTIME_ADDR  \curr_phys, %ebx
-    add  %eax, %ebx # add entry offset
-
-    # Page table entry = target phys address + flags
-    M_RESOLVE_RUNTIME_ADDR  \dest_phys, %eax
-    or  $(\entry_flags & 0xfff), %eax
-
-    # Write lower 32-bit of 64-bit page table entry
-    mov  %eax, (%ebx)
-
-    # Write upper half: stays zero (just to be sure).
-    # All physical addresses in this stage are in the 32-bit range,
-    # so this is correct.
-    movl  $0, +4(%ebx)
-.endm
-
-
-/*
- * Create a page-table entry for the given address.
- *
- * Clobbers: rflags, %eax, %ebx
- */
-.macro  M_CREATE_PT_ENTRY  vaddr, level, curr_phys, dest_phys, entry_flags
-    M_CALC_PT_ENTRY_OFFSET  \level \vaddr
-    _M_CREATE_PT_ENTRY  \curr_phys, \dest_phys, \entry_flags
-.endm
-
-
-/*
- * Create a page-table entry for the given address but applies the relocation
- * offset to the address beforehand.
- *
- * Clobbers: rflags, %eax, %ebx
- */
-.macro  M_CREATE_PT_ENTRY_RELOC  vaddr, level, curr_phys, dest_phys, entry_flags
-    M_CALC_PT_ENTRY_OFFSET_RELOC  \level \vaddr
-    _M_CREATE_PT_ENTRY  \curr_phys, \dest_phys, \entry_flags
-.endm
-
+####################################################################
 
 /*
  * Adds the given bits to the given control register.

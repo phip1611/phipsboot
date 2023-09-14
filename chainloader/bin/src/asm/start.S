@@ -1,6 +1,12 @@
 # The assembly file uses GNU Assembly (GAS) language with AT&T syntax.
 
 # Entry of the bootloader. Look at "start" symbol for more information.
+#
+# Register Usage:
+# - %edi holds the bootloader magic
+# - %esi holds the bootloader info address.
+# - %ebp will contain the load address offset during runtime
+# - All other 32-bit registers can be used as general purpose registers
 
 .extern rust_entry STACK_TOP
 
@@ -12,28 +18,11 @@
 # Multiboot2 loader (such as GRUB) even though the ELF file is a static
 # executable without any relocation information. Where necessary, instructions
 # are patched during runtime to cope with relocations.
-#
-# Register Usage:
-# - %edi holds the Multiboot2 magic
-# - %esi holds the MBI address.
-# - %ebp will contain the load address offset during runtime
-# - %esp will be set to 0 prevent accidental stack usage in boot code
-#   (but will be initialized before jumping into Rust code)
-# - All other 32-bit registers can be used as general purpose registers
 .global start
 start:
     # #############################################################
     # Clear interrupts. They should never be activated at this point anyway.
     cli
-
-    # #############################################################
-    # Assert Multiboot2 handoff
-    cmp  $MULTIBOOT2_MAGIC,  %eax
-    je   0f # jump on success
-    mov  $0xbadb001, %eax
-    ud2  # crash system
-    0:
-    # flow continues..
 
     # #############################################################
     # Save Multiboot2 handoff parameters
@@ -55,6 +44,20 @@ start:
     mov  %eax,    (%ebx) # Restore first 4 bytes of MBI.
 
     # #############################################################
+    # Prepare far jump (ljmp) into 64-bit mode.
+
+    # Update ldgdt input data with relocation offset and load GDT.
+    M_RESOLVE_RUNTIME_ADDR  gdt,             %eax
+    M_RESOLVE_RUNTIME_ADDR  gdt_ptr,         %ebx
+    mov                     %eax,            (%ebx)
+    M_RESOLVE_RUNTIME_ADDR ldt_gdt_data,     %eax
+    lgdt                                     (%eax)
+
+    M_RESOLVE_RUNTIME_ADDR bit64_trampoline, %eax
+    M_RESOLVE_RUNTIME_ADDR ljmp_dest,        %ebx
+    mov                     %eax,            (%ebx)
+
+    # #############################################################
     # Prepare page tables
     #
     # Flags:
@@ -62,25 +65,26 @@ start:
     # - 0x83: present + writeable, huge page
     #
     # Structure:
-    # L4 Table --> L3 Table (lo) ---> L2 Table (lo) --> 2 MiB identity mapping
-    #          \-> L3 Table (hi) ---> L2 Table (hi) --> 2 MiB identity mapping
+    # L4 -> L3 (lo) -> L2 (lo) -> 2 MiB r+x idendity mapping of boot code
+    #   \-> L3 (hi) -> L2 (hi) -> L1 (hi) -> x rx mappings of RX segment
+    #                                    \-> x ro mappings of RO segment
+    #                                    \-> x rw mappings of RW segment
 
-    # Step 1/2: Identity mapping of actual load address.
+    # Create identity mapping.
+    M_MAP_SYMBOL32  4 LINK_ADDR_BOOT boot_mem_pt_l4 boot_mem_pt_l3_lo 0x1
+    M_MAP_SYMBOL32  3 LINK_ADDR_BOOT boot_mem_pt_l3_lo boot_mem_pt_l2_lo 0x1
+    M_MAP_SYMBOL32  2 LINK_ADDR_BOOT boot_mem_pt_l2_lo LINK_ADDR_BOOT 0x81
 
-    M_CREATE_PT_ENTRY_RELOC  0x200000, 4, boot_mem_page_table_l4, boot_mem_page_table_l3, 0x3
-    M_CREATE_PT_ENTRY_RELOC  0x200000, 3, boot_mem_page_table_l3, boot_mem_page_table_l2_lo, 0x3
-    M_CREATE_PT_ENTRY_RELOC  0x200000, 2, boot_mem_page_table_l2_lo, 0x200000, 0x83
 
-    # Step 2/2: High-level mapping of Rust code
+    # common mappings for all segments
+    M_MAP_HIGH_ADDR  4 LINK_ADDR_RX_PTR boot_mem_pt_l4 boot_mem_pt_l3_hi 0x3
+    M_MAP_HIGH_ADDR  3 LINK_ADDR_RO_PTR boot_mem_pt_l3_hi boot_mem_pt_l2_hi 0x3
+    M_MAP_HIGH_ADDR  2 LINK_ADDR_RW_PTR boot_mem_pt_l2_hi boot_mem_pt_l1_hi 0x3
 
-    # Map virtual address LINK_ADDR_LOADER to runtime address of
-    # this binary as one single 2 MiB huge page mapping.
+    M_MAP_HIGH_ADDR  1 LINK_ADDR_RX_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT 0x1
+    M_MAP_HIGH_ADDR  1 LINK_ADDR_RO_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT 0x1
+    M_MAP_HIGH_ADDR  1 LINK_ADDR_RW_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT 0x3
 
-    # The symbol LINK_ADDR_LOADER is not available here for lazy
-    # evaluation of the virtual address inside the macro.
-    M_CREATE_PT_ENTRY  0xffffffff88200000, 4, boot_mem_page_table_l4, boot_mem_page_table_l3, 0x3
-    M_CREATE_PT_ENTRY  0xffffffff88200000, 3, boot_mem_page_table_l3, boot_mem_page_table_l2_hi, 0x3
-    M_CREATE_PT_ENTRY  0xffffffff88200000, 2, boot_mem_page_table_l2_hi, 0x200000, 0x83
 
     # #############################################################
     # Enable paging
@@ -91,7 +95,7 @@ start:
     # identity mapping of this code at runtime exists, the BSP will die with a
     # page fault after the update of %cr0.
 
-    M_RESOLVE_RUNTIME_ADDR  boot_mem_page_table_l4, %eax
+    M_RESOLVE_RUNTIME_ADDR  boot_mem_pt_l4, %eax
     mov  %eax, %cr3 # set root page table
 
     M_SET_MSR_BITS  MSR_IA32_EFER_REG MSR_IA32_EFER_LME
@@ -109,22 +113,11 @@ start:
     # #############################################################
     # Far jump (ljmp) into 64-bit mode.
 
-    # Update ldgdt input data with relocation offset and load GDT.
-    M_RESOLVE_RUNTIME_ADDR  gdt,             %eax
-    M_RESOLVE_RUNTIME_ADDR  gdt_ptr,         %ebx
-    mov                     %eax,            (%ebx)
-    M_RESOLVE_RUNTIME_ADDR ldt_gdt_data,     %eax
-    lgdt                                     (%eax)
-
-    M_RESOLVE_RUNTIME_ADDR bit64_trampoline, %eax
-    M_RESOLVE_RUNTIME_ADDR ljmp_dest,        %ebx
-    mov                     %eax,            (%ebx)
-
     # Equal to something like "ljmp $8:label" but constructed at runtime.
     # Required, as ljmp needs an absolute address.
     .byte X86_LJMP
     ljmp_dest: .long 0
-    .word 8 # Use first selector of GDT (not the null selector)
+    .word 8 # Offset of first GDT selector
 
     # #############################################################
     # 64-bit trampoline
@@ -157,6 +150,16 @@ ldt_gdt_data:
 gdt_ptr:    .quad 0     # this location will be updated during runtime to reflect relocations
 
 
+# Provide mapping metadata info for the boot code.
+# This way, the assembly code can access these symbols that come from the linker
+# and operate with 64-bit values even in 32-bit mode.
+LINK_ADDR_RX_PTR:   .quad LINK_ADDR_RX
+                    .long COUNT_PAGES_RX
+LINK_ADDR_RO_PTR:   .quad LINK_ADDR_RO
+                    .long COUNT_PAGES_RO
+LINK_ADDR_RW_PTR:   .quad LINK_ADDR_RW
+                    .long COUNT_PAGES_RW
+
 # Global Descriptor Table (GDT)
 .align 8
 gdt:
@@ -172,19 +175,31 @@ gdt_end:
 # Page tables backing memory
 
 .align 4096
-.global boot_mem_page_table_l4
-boot_mem_page_table_l4:
+.global boot_mem_pt_l4
+boot_mem_pt_l4:
     .zero 4096
 
 .align 4096
-.global boot_mem_page_table_l3
-boot_mem_page_table_l3:
+.global boot_mem_pt_l3_lo
+boot_mem_pt_l3_lo:
     .zero 4096
 
 .align 4096
-boot_mem_page_table_l2_hi:
+.global boot_mem_pt_l3_hi
+boot_mem_pt_l3_hi:
     .zero 4096
 
 .align 4096
-boot_mem_page_table_l2_lo:
+.global boot_mem_pt_l2_lo
+boot_mem_pt_l2_lo:
+    .zero 4096
+
+.align 4096
+.global boot_mem_pt_l2_hi
+boot_mem_pt_l2_hi:
+    .zero 4096
+
+.align 4096
+.global boot_mem_pt_l1_hi
+boot_mem_pt_l1_hi:
     .zero 4096
