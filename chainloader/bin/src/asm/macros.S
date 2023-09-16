@@ -94,7 +94,7 @@
         M_RESOLVE_RUNTIME_ADDR \phys_dest %edx
         or  $(\flags & 0xfff), %edx
 
-        M_WRITE_PT_ENTRY %edx %ebx %eax
+        M_WRITE_PT_ENTRY %edx %ebx %eax \flags
     .endif
     .if \level == 1
         mov  8(%esp), %esp  # num of pages
@@ -110,7 +110,6 @@
         mov  %ebx, %ecx
         and  $(0x1ff000), %ebx
         add  %ebx,  %edx
-        or   $(\flags & 0xfff), %edx
         # now: %ebx and %edx have the same offset from the 2 MiB-aligned base
 
         0:
@@ -119,7 +118,7 @@
 
             M_RESOLVE_RUNTIME_ADDR \phys_table %ecx
 
-            M_WRITE_PT_ENTRY %edx %ecx %eax
+            M_WRITE_PT_ENTRY %edx %ecx %eax \flags
 
             dec  %esp
             add  $8,    %eax  # increase offset into PT
@@ -157,22 +156,22 @@
 
     # entry in %edx
     M_RESOLVE_RUNTIME_ADDR \phys_dest %edx
-    or  $(\flags & 0xfff), %edx
 
-    M_WRITE_PT_ENTRY %edx %ebx %eax
+    M_WRITE_PT_ENTRY %edx %ebx %eax \flags
 .endm
 
 /**
- * Writes a single page table entry.
+ * Writes a single page table entry with all specified flags.
  *
  * Clobbers: rflags, reg_phys_table
  */
-.macro M_WRITE_PT_ENTRY  reg_entry_31_0, reg_phys_table, reg_offset
+.macro M_WRITE_PT_ENTRY  reg_entry_31_0, reg_phys_table, reg_offset, flags
     add  \reg_offset,       \reg_phys_table
+    or  $(\flags & 0xfff),  \reg_entry_31_0
     mov  \reg_entry_31_0,   (\reg_phys_table)
 
-    # for completeness; all physical addresses are in 32-bit range anyway
-    movl  $0, 4(\reg_phys_table)
+    # Apply Execute Disable (XD) flag
+    movl  $((\flags >> 32) & (1 << 31)), 4(\reg_phys_table)
 .endm
 
 

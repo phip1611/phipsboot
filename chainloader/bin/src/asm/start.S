@@ -82,8 +82,8 @@ start:
     M_MAP_HIGH_ADDR  2 LINK_ADDR_RW_PTR boot_mem_pt_l2_hi boot_mem_pt_l1_hi 0x3
 
     M_MAP_HIGH_ADDR  1 LINK_ADDR_RX_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT 0x1
-    M_MAP_HIGH_ADDR  1 LINK_ADDR_RO_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT 0x1
-    M_MAP_HIGH_ADDR  1 LINK_ADDR_RW_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT 0x3
+    M_MAP_HIGH_ADDR  1 LINK_ADDR_RO_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT (1 << 63 | 0x1)
+    M_MAP_HIGH_ADDR  1 LINK_ADDR_RW_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT (1 << 63 | 0x3)
 
 
     # #############################################################
@@ -98,7 +98,7 @@ start:
     M_RESOLVE_RUNTIME_ADDR  boot_mem_pt_l4, %eax
     mov  %eax, %cr3 # set root page table
 
-    M_SET_MSR_BITS  MSR_IA32_EFER_REG MSR_IA32_EFER_LME
+    M_SET_MSR_BITS  MSR_IA32_EFER_REG MSR_IA32_EFER_BITS
 
     # Set paging properties.
     # Unlike for 32-bit paging, the CR4.PSE bit is not required for huge pages.

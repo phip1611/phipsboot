@@ -7,7 +7,9 @@
 # The register address of the MSR_IA32_EFER register.
 .set MSR_IA32_EFER_REG, (0xc0000080)
 # Long mode enable bit.
-.set MSR_IA32_EFER_LME, (1 << 8)
+.set MSR_IA32_EFER_LME, (1 << 8) # Long Mode Enable
+.set MSR_IA32_EFER_NX, (1 << 11) # Activate Not-Executable PT flag
+.set MSR_IA32_EFER_BITS, (MSR_IA32_EFER_NX | MSR_IA32_EFER_LME)
 
 
 .set CR0_PE, (1 << 0)  # Protection Enable
