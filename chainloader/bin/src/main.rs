@@ -42,32 +42,13 @@ extern "C" fn rust_entry(
     mem::init(load_addr_offset);
     logger::init(); // logger depends on an enabled heap
 
-    /*unsafe {
-        core::arch::asm!("int3")
-    }*/
-    writeln!(&mut driver::DebugconLogger, "hello {}", "world");
-
-    let mut log_buf = String::new();
-    log_buf.push_str("first");
-    let x = a(10);
-    writeln!(&mut driver::DebugconLogger, "hello {} x={x}", "world");
-    log_buf.push_str("second");
-    writeln!(&mut driver::DebugconLogger, "{}", log_buf.as_str());
-    let _ = writeln!(&mut log_buf, "hello {}", "world");
-    driver::DebugconLogger.write_str(log_buf.as_str());
-    //log::info!("BEFORE Hello World from Rust entry");
-
-    loop {
-
-    }
-
-
     logger::add_backend(driver::DebugconLogger::default()).unwrap();
     logger::flush(); // flush all buffered messages
 
     let vec = vec![1, 2, 3];
 
-    log::info!("AFTER Hello World from Rust entry");
+    log::info!("AFTER logger init");
+    log::info!("AFTER logger init {vec:#x?}");
 
 /*    let _ = Printer.write_str("Hello World from Rust Entry\n");
     let _ = writeln!(Printer, "magic: {:#x?}, ptr: {:#x?}, load_addr_offset: {:#x?}", multiboot2_magic, multiboot2_ptr, load_addr_offset);

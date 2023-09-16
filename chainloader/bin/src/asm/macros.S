@@ -120,12 +120,12 @@
 
             M_WRITE_PT_ENTRY %edx %ecx %eax \flags
 
-            dec  %esp
-            add  $8,    %eax  # increase offset into PT
-            add  $4096, %ebx  # next page; add to addr bits 31..0
-            jo   2f # Add above assumes that overflows will never happen!
-            add  $4096, %edx  # increase phys mem offset from base
-            jmp  0b
+            dec   %esp         # decrement counter
+            add   $8,    %eax  # increase offset into PT
+            add   $4096, %ebx  # next page; add to addr bits 31..0
+            jo    2f # Add above assumes that overflows will never happen!
+            add   $4096, %edx  # increase phys mem offset from base
+            jmp   0b
         2:  ud2
         1:
     .endif
