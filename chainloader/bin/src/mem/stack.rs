@@ -56,6 +56,12 @@ pub fn usage() -> u64 {
     top() as u64 - current_rsp
 }
 
+/// Returns the current stack usage in percent.
+#[inline(never)]
+pub fn usage_percent() -> f32 {
+    usage() as f32 / usable_size() as f32
+}
+
 /// Returns the current canary.
 pub fn canary() -> u64 {
     unsafe { STACK.canary() }
