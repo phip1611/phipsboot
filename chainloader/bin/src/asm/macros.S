@@ -3,6 +3,7 @@
 # All macros provided here operate on 32-bit registers and are meant to be used
 # to prepare the transition to 64-bit mode.
 
+
 /*
  * Calculates the real load address from the link address of a known symbol and
  * stores it in the provided register. It relies on the relocation offset already
@@ -16,6 +17,7 @@
     mov  $\link_addr,  \reg_out
     add  %ebp,         \reg_out
 .endm
+
 
 /*
  * Computes the page table offset for a virtual address with x86_64 4-level
@@ -61,9 +63,6 @@
     imul  $8, %eax
 .endm
 
-
-
-####################################################################
 
 /**
  * Maps a LOAD segment with information stored behind `mapping_info_ptr` into
@@ -132,6 +131,7 @@
 
 .endm
 
+
 /**
  * Takes a 32-bit symbol, calculates its actual runtime adress, and maps the
  * virtual address for the given level and the given flags.
@@ -160,6 +160,7 @@
     M_WRITE_PT_ENTRY %edx %ebx %eax \flags
 .endm
 
+
 /**
  * Writes a single page table entry with all specified flags.
  *
@@ -174,8 +175,6 @@
     movl  $((\flags >> 32) & (1 << 31)), 4(\reg_phys_table)
 .endm
 
-
-####################################################################
 
 /*
  * Adds the given bits to the given control register.
@@ -202,4 +201,3 @@
     or   $\bits, %eax
     wrmsr
 .endm
-
