@@ -31,6 +31,13 @@ start:
     mov  %ebx, %esi
 
     # #############################################################
+    # Enable FPU, SSE, and FXSAVE
+    mov  %cr0,     %eax
+    and  $0xfffb,  %ax     # clear coprocessor emulation CR0.EM
+    M_SET_CR_BITS  %cr0 CR0_MP
+    M_SET_CR_BITS  %cr4 (CR4_OSFXSR | CR4_OSXMMEXCPT)
+
+    # #############################################################
     # Find relocation offset and store it in %ebp
 
     mov   (%ebx), %eax   # Save first 4 bytes of MBI.
@@ -105,7 +112,7 @@ start:
     M_SET_CR_BITS %cr4, CR4_PAE
 
     # Finally activate paging.
-    M_SET_CR_BITS %cr0, CR0_BITS
+    M_SET_CR_BITS %cr0, (CR0_PE | CR0_WP | CR0_PG)
 
     # Now, we are in 64-bit compatibility mode with 4-level paging. The code
     # running right now is identity mapped.

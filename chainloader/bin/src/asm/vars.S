@@ -13,12 +13,13 @@
 
 
 .set CR0_PE, (1 << 0)  # Protection Enable
+.set CR0_MP, (1 << 1)  # Coprocessor Monitoring
 .set CR0_WP, (1 << 16) # Write Protect
 .set CR0_PG, (1 << 31) # Paging
-.set CR0_BITS, (CR0_PE | CR0_WP | CR0_PG)
-
 
 .set CR4_PAE, (1 << 5) # Physical Address Extension
+.set CR4_OSFXSR, (1 << 9)
+.set CR4_OSXMMEXCPT, (1 << 10)
 
-# op-code of the "ljmp" instruction.
+# Op-code of the "ljmp" instruction.
 .set X86_LJMP, 0xea
