@@ -1,3 +1,4 @@
+# [target."x86-64-unknown-none"]
 [build]
 rustflags = [
     # We set up page tables anyway, hence, we do not need position independent

@@ -6,7 +6,7 @@ export RELEASE             ?= release
 export COMPILE_TARGET       = x86_64-unknown-none
 export CHAINLOADER_ARTIFACT = $(CARGO_TARGET_DIR)/${COMPILE_TARGET}/$(RELEASE)/bin
 
-export CARGO_BIN_FLAGS = --target $(COMPILE_TARGET)
+export CARGO_BIN_FLAGS = --target $(COMPILE_TARGET).json -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem
 
 .PHONY: default
 default: bin

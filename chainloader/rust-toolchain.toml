@@ -1,6 +1,6 @@
 # https://rust-lang.github.io/rustup/overrides.html
 
 [toolchain]
-channel = "1.72"
-components = [ "rust-std", "rustc", "cargo", "clippy", "rustfmt" ]
-targets = [ "x86_64-unknown-none" ]
+# Rust nightly 1.74
+channel = "nightly-2023-08-31"
+components = [ "rust-src", "rust-std", "rustc", "cargo", "clippy", "rustfmt" ]
