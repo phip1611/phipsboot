@@ -2,23 +2,23 @@
 
 # Multiboot2 Header definition.
 
-.align 8
+.balign 8
 .section .mb2_hdr, "a", @progbits
 
-                        .align 8 /* Header must be 8-byte aligned. */
+                        .balign 8 /* Header must be 8-byte aligned. */
 multiboot2_hdr_start:   .long   0xe85250d6
                         .long   0x0 /* arch: i386 */
                         .long   (multiboot2_hdr_end - multiboot2_hdr_start)
                         .long  -(0xe85250d6 + (multiboot2_hdr_end - multiboot2_hdr_start))
 
                         /* module alignment tag */
-                        .align 8
+                        .balign 8
                         .word   0x6
                         .word   0x0 /* flags */
                         .long   0x8 /* size */
 
                         /* information request tag */
-                        .align 8
+                        .balign 8
                         .Linformation_request_begin:
                         .word   0x1
                         .word   0x1 /* flags: optional */
@@ -47,7 +47,7 @@ multiboot2_hdr_start:   .long   0xe85250d6
                         .Linformation_request_end:
 
                         /* relocatable tag */
-                        .align 8
+                        .balign 8
                         .word   0xa /* type */
                         .word   0x1 /* flags: optional */
                         .long   0x18 /* size */
@@ -57,7 +57,7 @@ multiboot2_hdr_start:   .long   0xe85250d6
                         .long   2 /* prefer high */
 
                         /* end tag */
-                        .align 8
+                        .balign 8
                         .word   0x0 /* type */
                         .word   0x0 /* flags */
                         .long   0x8 /* size */
