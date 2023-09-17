@@ -142,7 +142,7 @@ bit64_trampoline:
 
 .section .boot.data, "a", @progbits
 
-.align 4
+.balign 4
 # Input data for the ldgdt instruction which takes a 6-byte sequence:
 # the size (2 byte) and the location (4 byte) of the GDT.
 ldt_gdt_data:
@@ -153,6 +153,8 @@ gdt_ptr:    .quad 0     # this location will be updated during runtime to reflec
 # Provide mapping metadata info for the boot code.
 # This way, the assembly code can access these symbols that come from the linker
 # and operate with 64-bit values even in 32-bit mode.
+
+.balign 8
 LINK_ADDR_RX_PTR:   .quad LINK_ADDR_RX
                     .long COUNT_PAGES_RX
 LINK_ADDR_RO_PTR:   .quad LINK_ADDR_RO
@@ -161,7 +163,7 @@ LINK_ADDR_RW_PTR:   .quad LINK_ADDR_RW
                     .long COUNT_PAGES_RW
 
 # Global Descriptor Table (GDT)
-.align 8
+.balign 8
 gdt:
     # null selector
     .long 0
@@ -174,32 +176,32 @@ gdt_end:
 
 # Page tables backing memory
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l4
 boot_mem_pt_l4:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l3_lo
 boot_mem_pt_l3_lo:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l3_hi
 boot_mem_pt_l3_hi:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l2_lo
 boot_mem_pt_l2_lo:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l2_hi
 boot_mem_pt_l2_hi:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l1_hi
 boot_mem_pt_l1_hi:
     .zero 4096
