@@ -13,8 +13,8 @@ default: bin
 
 .PHONY: bin
 bin:
-	cd chainloader && cargo build $(CARGO_BIN_FLAGS)
-	cd chainloader && cargo build --release $(CARGO_BIN_FLAGS)
+	cd chainloader && cargo build $(CARGO_BIN_FLAGS) --verbose
+	cd chainloader && cargo build --release $(CARGO_BIN_FLAGS) --verbose
 	grub-file --is-x86-multiboot2 "$(CHAINLOADER_ARTIFACT)"
 	#objcopy -O elf32-i386 "$(BIN_ARTIFACT)" "$(BIN_ARTIFACT)_elf32"
 
