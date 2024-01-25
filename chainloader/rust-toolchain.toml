@@ -1,6 +1,6 @@
 # https://rust-lang.github.io/rustup/overrides.html
 
 [toolchain]
-channel = "1.72"
+channel = "1.75"
 components = [ "rust-std", "rustc", "cargo", "clippy", "rustfmt" ]
 targets = [ "x86_64-unknown-none" ]
