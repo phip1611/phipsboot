@@ -52,9 +52,9 @@ multiboot2_hdr_start:   .long   0xe85250d6
                         .word   0x1 /* flags: optional */
                         .long   0x18 /* size */
                         .long   0x200000 /* 2 MiB minimum load address. */
-                        .long   0xc0000000 /* 3 GiB maximum load address. */
+                        .long   0xffe00000 /* 4 GiB mins 2 MiB maximum load address. */
                         .long   0x200000 /* 2 MiB huge page alignment */
-                        .long   2 /* prefer high */
+                        .long   0 /* no preference */
 
                         /* end tag */
                         .balign 8
