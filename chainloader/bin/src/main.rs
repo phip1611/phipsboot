@@ -14,6 +14,7 @@ mod driver;
 
 use alloc::string::String;
 use alloc::{format, vec};
+use alloc::fmt::format;
 use alloc::vec::Vec;
 use core::fmt::Write;
 use core::hint::black_box;
@@ -41,18 +42,20 @@ extern "C" fn rust_entry(
 ) -> ! {
     mem::init(load_addr_offset);
     logger::init(); // logger depends on an enabled heap
-
     logger::add_backend(driver::DebugconLogger::default()).unwrap();
     logger::flush(); // flush all buffered messages
-
-    let vec = vec![1, 2, 3];
-
-    log::info!("AFTER logger init {vec:#x?}");
     log::debug!("magic               = {:#x?}", bootloader_magic);
     log::debug!("bootloader_info_ptr = {:#x?}", bootloader_info_ptr);
     log::debug!("load_addr_offset    = {:#x?}", load_addr_offset);
+
+    let vec = vec![1, 2, 3];
+    let mut string = String::new();
+    write!(&mut string, "{:?}", &vec).unwrap();
+
+    log::info!("AFTER logger init {vec:#x?}");
+    log::info!("string = {string:#x?}");
     stack::assert_sanity_checks();
-    break_stack();
+    // break_stack();
     loop {}
 }
 
