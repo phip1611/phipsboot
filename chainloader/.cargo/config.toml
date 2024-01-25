@@ -1,4 +1,17 @@
+# This file gets automatically recognized each time
+# we run "cargo check|build|...".
+
+# We need to cross-compile the core library.
+[unstable]
+build-std = [
+    "core",
+    "compiler_builtins",
+    "alloc",
+]
+build-std-features = ["compiler-builtins-mem"]
+
 [build]
+# target = "x86_64-unknown-none-static.json"
 rustflags = [
     # We set up page tables anyway, hence, we do not need position independent
     # Rust code. The boot code itself (written in Assembly) stays unaffected
