@@ -1,3 +1,4 @@
+#![feature(abi_x86_interrupt)]
 #![no_main]
 #![no_std]
 
@@ -8,20 +9,18 @@
 extern crate alloc;
 
 mod asm;
-mod extern_symbols;
-mod mem;
 mod driver;
+mod extern_symbols;
+mod idt;
+mod mem;
 
+use crate::mem::stack;
 use alloc::string::String;
-use alloc::{format, vec};
-use alloc::fmt::format;
-use alloc::vec::Vec;
+use alloc::vec;
 use core::fmt::Write;
 use core::hint::black_box;
 use core::panic::PanicInfo;
-use core::str::FromStr;
 use lib::logger;
-use crate::mem::stack;
 
 /// Entry into the high-level code of the loader.
 ///
@@ -40,13 +39,14 @@ extern "C" fn rust_entry(
     bootloader_info_ptr: u64,
     load_addr_offset: i64,
 ) -> ! {
+    idt::init();
     mem::init(load_addr_offset);
     logger::init(); // logger depends on an enabled heap
     logger::add_backend(driver::DebugconLogger::default()).unwrap();
     logger::flush(); // flush all buffered messages
-    log::debug!("magic               = {:#x?}", bootloader_magic);
-    log::debug!("bootloader_info_ptr = {:#x?}", bootloader_info_ptr);
-    log::debug!("load_addr_offset    = {:#x?}", load_addr_offset);
+    log::trace!("magic               = {:#x?}", bootloader_magic);
+    log::trace!("bootloader_info_ptr = {:#x?}", bootloader_info_ptr);
+    log::trace!("load_addr_offset    = {:#x?}", mem::load_offset());
 
     let vec = vec![1, 2, 3];
     let mut string = String::new();
@@ -55,10 +55,15 @@ extern "C" fn rust_entry(
     log::info!("AFTER logger init {vec:#x?}");
     log::info!("string = {string:#x?}");
     stack::assert_sanity_checks();
+
     // break_stack();
+    create_pagefault();
+
     loop {}
 }
 
+/// Sometimes useful to test the stack + stack canary.
+#[allow(unused,unconditional_recursion)]
 #[inline(never)]
 fn break_stack() {
     stack::assert_sanity_checks();
@@ -66,6 +71,14 @@ fn break_stack() {
     break_stack();
 }
 
+/// Sometimes useful to test the binary.
+#[allow(unused)]
+fn create_pagefault() {
+    let ptr = core::ptr::null::<u8>();
+    unsafe {
+        black_box(core::ptr::read_volatile(ptr));
+    }
+}
 
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {

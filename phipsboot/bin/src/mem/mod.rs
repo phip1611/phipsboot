@@ -22,8 +22,8 @@ pub fn load_offset() -> i64 {
     *ONCE.get().expect("should have been configured")
 }
 
-/// Translates a virtual link address of the loader to the physical address in
-/// memory.
+/// Translates the virtual link address to a physical address in memory.
 pub fn virt_to_phys(virt: VirtAddr) -> PhysAddr {
+    // assert_eq!(virt >= );
     (virt.val() as i64 + load_offset()).into()
 }

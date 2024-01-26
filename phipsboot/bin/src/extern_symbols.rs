@@ -5,82 +5,88 @@
 //! So, either the type has to be en array or `core::ptr::addr_of!(SYMBOL)` is
 //! required.
 
-pub use bootcode::*;
-pub use other::*;
 
-macro_rules! get_symbol_addr {
-    ($ident:ident) => {
-        (unsafe { $ident.as_ptr() }) as u64
-    };
+#[allow(unused)]
+#[allow(unused)]
+pub use {
+    bootcode::*,
+    other::*,
+};
+
+/// Trace-print all relevant symbols.
+pub fn trace() {
+    log::trace!("boot_mem_pt_l4    = {:?}", boot_mem_pt_l4());
+    log::trace!("boot_mem_pt_l3_hi = {:?}", boot_mem_pt_l3_hi());
+    log::trace!("boot_mem_pt_l3_lo = {:?}", boot_mem_pt_l3_lo());
+    log::trace!("boot_mem_pt_l2_hi = {:?}", boot_mem_pt_l2_hi());
+    log::trace!("boot_mem_pt_l2_lo = {:?}", boot_mem_pt_l2_lo());
+    log::trace!("boot_mem_pt_l1_hi = {:?}", boot_mem_pt_l1_hi());
 }
 
-/// 2 MiB.
-#[allow(non_upper_case_globals)]
-const MiB2: u64 = 0x200000;
-
-/// Modules from the boot code. These symbols are resolved by their link
-/// address in the low memory address space (see `LINK_ADDR_BOOT`).
+/// Symbols with their link address from the boot code.
+#[allow(unused)]
 mod bootcode {
     use super::*;
 
-    /// Boot code and loader code together fit within one single 2 MiB mapping.
-    /// Both have different link addresses, but the offset of the high link
-    /// address ensures that also the "low" symbol can be reached. This function
-    /// performs this calculation and return the address of symbols from the
-    /// boot code at the high link address.
-    fn to_high_link_addr(addr: u64) -> u64 {
-        let offset = addr & MiB2;
-        link_addr_loader() + offset
-    }
-
     extern "C" {
-        /// L4 page table backing memory address in the link address space of
-        /// the boot code.
-        #[link_name = "boot_mem_page_table_l4"]
-        static mut BOOT_MEM_PAGE_TABLE_L4: [u64; 0];
+        #[link_name = "boot_mem_pt_l4"]
+        static mut BOOT_MEM_PT_L4: [u64; 0];
 
-        /// L3 page table backing memory address in the link address space of
-        /// the boot code.
-        #[link_name = "boot_mem_page_table_l4"]
-        static mut BOOT_MEM_PAGE_TABLE_L3: [u64; 0];
+        #[link_name = "boot_mem_pt_l3_lo"]
+        static mut BOOT_MEM_PT_L3_LO: [u64; 0];
+
+        #[link_name = "boot_mem_pt_l3_hi"]
+        static mut BOOT_MEM_PT_L3_HI: [u64; 0];
+
+        #[link_name = "boot_mem_pt_l2_lo"]
+        static mut BOOT_MEM_PT_L2_LO: [u64; 0];
+
+        #[link_name = "boot_mem_pt_l2_hi"]
+        static mut BOOT_MEM_PT_L2_HI: [u64; 0];
+
+        #[link_name = "boot_mem_pt_l1_hi"]
+        static mut BOOT_MEM_PT_L1_HI: [u64; 0];
     }
 
-    /// Returns the address of the L4 mem table in the high address space of the
-    /// loader.
-    pub fn boot_mem_page_table_l4() -> u64 {
-        let addr = get_symbol_addr!(BOOT_MEM_PAGE_TABLE_L4);
-        to_high_link_addr(addr)
+    pub fn boot_mem_pt_l4() -> *const u8 {
+        (unsafe { BOOT_MEM_PT_L4.as_ptr() }).cast()
     }
 
-    /// Returns the address of the L3 mem table in the high address space of the
-    /// loader.
-    pub fn boot_mem_page_table_l3() -> u64 {
-        let addr = get_symbol_addr!(BOOT_MEM_PAGE_TABLE_L3);
-        to_high_link_addr(addr)
+    pub fn boot_mem_pt_l3_lo() -> *const u8 {
+        (unsafe { BOOT_MEM_PT_L3_LO.as_ptr() }).cast()
+    }
+
+    pub fn boot_mem_pt_l3_hi() -> *const u8 {
+        (unsafe { BOOT_MEM_PT_L3_HI.as_ptr() }).cast()
+    }
+
+    pub fn boot_mem_pt_l2_lo() -> *const u8 {
+        (unsafe { BOOT_MEM_PT_L2_LO.as_ptr() }).cast()
+    }
+
+    pub fn boot_mem_pt_l2_hi() -> *const u8 {
+        (unsafe { BOOT_MEM_PT_L2_HI.as_ptr() }).cast()
+    }
+
+    pub fn boot_mem_pt_l1_hi() -> *const u8 {
+        (unsafe { BOOT_MEM_PT_L1_HI.as_ptr() }).cast()
     }
 }
 
 /// Symbols from linker script and other sources.
+#[allow(unused)]
 mod other {
     use super::*;
 
     extern "C" {
         /// The link address of the boot code.
         #[link_name = "LINK_ADDR_BOOT"]
-        static LINK_ADDR_BOOT: [u64; 1];
+        static LINK_ADDR_BOOT: [u64; 0];
 
         /// The link address of the loader code.
         #[link_name = "LINK_ADDR_LOADER"]
         static LINK_ADDR_LOADER: [u64; 0];
     }
 
-    /// Returns the 2-MiB aligned link address of the boot (assembly) code.
-    pub fn link_addr_boot() -> u64 {
-        get_symbol_addr!(LINK_ADDR_BOOT) & !MiB2
-    }
 
-    /// Returns the 2-MiB aligned link address of the loader (Rust) code.
-    pub fn link_addr_loader() -> u64 {
-        get_symbol_addr!(LINK_ADDR_LOADER) & !MiB2
-    }
 }
