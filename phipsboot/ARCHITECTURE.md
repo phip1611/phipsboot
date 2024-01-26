@@ -110,6 +110,10 @@ toolchain options to build this binary. However, for a convenient testing and
 build environment - `no_std` binaries + Cargo come in fact with some caveats -
 a small Makefile-based wrapper is used.
 
+### Why a Custom Rustc Target?
+
+TODO
+
 ## High-level Rust Code
 
 The high-level Rust code is compiled to 64-bit code and expects a bootstrapped

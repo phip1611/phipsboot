@@ -9,17 +9,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
-name = "bin"
-version = "0.1.0"
-dependencies = [
- "good_memory_allocator",
- "lib",
- "log",
- "multiboot2",
- "x86",
-]
-
-[[package]]
 name = "bit_field"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -99,6 +88,17 @@ dependencies = [
  "log",
  "ptr_meta",
  "uefi-raw",
+]
+
+[[package]]
+name = "phipsboot"
+version = "0.1.0"
+dependencies = [
+ "good_memory_allocator",
+ "lib",
+ "log",
+ "multiboot2",
+ "x86",
 ]
 
 [[package]]

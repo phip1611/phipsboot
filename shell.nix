@@ -5,6 +5,7 @@ in
 pkgs.mkShell rec {
   # CLI Utilities
   nativeBuildInputs = with pkgs; [
+    argc
     binutils # as and ld
     gcc
     grub2

@@ -1,13 +1,33 @@
 # PhipsBoot
 
-PhipsBoot is a relocatable x86_64 Multiboot2 chainloader recommended for usage
-in legacy boot environments. It is intended to be chainloaded by GRUB via
-Multiboot2 and mostly written in idiomatic Rust.
+PhipsBoot is an x86_64 chainloader that is relocatable in physical memory. This
+means that it doesn't need to be loaded at the load address specified in the ELF
+file. It automatically discovers whether it was relocated.
+
+PhipsBoot can be booted via Multiboot1, Multiboot2, and XEN PVH. However,
+it's main benefit comes out when it is chainload by GRUB via Multiboot2 in
+legacy BIOS boot systems.
 
 ## TL;DR: What does PhipsBoot do?
 
 It boots your x86_64 kernel in ELF format at its desired virtual address and
-performs the handoff in 64-bit long mode.
+performs the handoff in 64-bit long mode but takes away a lot of boot-related
+x86_64 complexity away from you.
+
+### Binary Formats of PhipsBoot
+
+The build itself produces `phipsboot.elf32` and `phipsboot.elf64`. Both are
+identical except for the ELF header. You usually always want to use the `.elf64`
+version except for when booting it via Multiboot1, where compliant bootloaders
+only accept 32-bit ELFs.
+
+<!--
+Furthermore, the build also produces a `.iso` variant that is bootable on
+legacy BIOS systems. The `.iso` variant uses a GRUB standalone image that
+chainloads PhipsBoot via Multiboot 2. GRUB2 will physically relocate PhipsBoot.
+The `.iso` variant is used for testing and for you as inspiration for on how
+you can package PhipsBoot along with your kernel.
+-->
 
 ## Which problems does PhipsBoot solve?
 

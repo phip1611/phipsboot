@@ -1,0 +1,12 @@
+# This file is empty on purpose. I prefer to configure the build target and
+# the "build-std" in the cargo invocation itself for each target (binary, unit
+# tests). Otherwise, experience has proven that it is hard or even impossible to
+# conveniently use a Cargo workspace with unit tests made for the host and a
+# binary made for a different target.
+#
+# Furthermore, I want to specify RUSTFLAGS for everything that is build. As
+# libcore (core + alloc) need to use the correct relocation-model for example,
+# I ensure that the RUSTFLAGS apply to all compilation units. Otherwise, if
+# specified here, RUSTFLAGS are only applied to this crate itself but not
+# libcore.
+# (TODO, verify that statement ^).
