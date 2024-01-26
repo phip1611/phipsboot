@@ -70,7 +70,7 @@
  *
  * This code relies on the fact that the whole LOAD segment can be loaded into
  * a single PT, i.e., that the highest index is 512. Or in other words, the LOAD
- * segment must not cross a 2MiB address boundary.
+ * segment must not cross a 2 MiB address boundary.
  *
  * Clobbers: rflags, %eax, %ebx, %ecx, %edx, %esp
  */

@@ -80,7 +80,7 @@ also reuse GRUB.
 ### Final Machine State
 
 - BSP in 64-bit long mode with 4-level paging
-- All load segments of the kernel are loaded via 2 MiB huge page mapping with
+- All load segments of the kernel are loaded via 2 MiB huge-page mapping with
   their corresponding page-table rights.
 - APs are still asleep
 - Register `%rdi` has pointer to PhipsBoot boot information
