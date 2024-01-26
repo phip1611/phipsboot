@@ -16,7 +16,7 @@ PHDRS
      * - Strictly speaking irrelevant for our dispatch in 32-bit protected mode,
      *   but technically the right permissions for those segments.
      */
-    boot   PT_LOAD FLAGS(7) FILEHDR PHDRS;
+    boot   PT_LOAD FLAGS(7);
     rx     PT_LOAD FLAGS(5);
     ro     PT_LOAD FLAGS(4);
     rw     PT_LOAD FLAGS(6);
@@ -59,7 +59,7 @@ SECTIONS {
     /*
      * All symbols from the assembly code.
      */
-    .boot LINK_ADDR_BOOT : AT(LOAD_ADDR_BOOT) ALIGN(2M) {
+    .boot LINK_ADDR_BOOT : AT(LOAD_ADDR_BOOT) ALIGN(4k) {
         *(.boot.text)
         KEEP(*(.mb2_hdr));
         *(.boot.data)
