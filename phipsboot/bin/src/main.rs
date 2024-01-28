@@ -13,10 +13,9 @@ mod driver;
 mod extern_symbols;
 mod idt;
 mod mem;
+mod env;
 
 use crate::mem::stack;
-use alloc::string::String;
-use alloc::vec;
 use core::fmt::Write;
 use core::hint::black_box;
 use core::panic::PanicInfo;
@@ -39,21 +38,16 @@ extern "C" fn rust_entry(
     bootloader_info_ptr: u64,
     load_addr_offset: i64,
 ) -> ! {
+    // The order of the init functions mostly reflect actual dependencies!
     idt::init();
     mem::init(load_addr_offset);
-    logger::init(); // logger depends on an enabled heap
+    logger::init(); // after mem init; logger depends on heap!
     logger::add_backend(driver::DebugconLogger::default()).unwrap();
     logger::flush(); // flush all buffered messages
-    log::trace!("magic               = {:#x?}", bootloader_magic);
-    log::trace!("bootloader_info_ptr = {:#x?}", bootloader_info_ptr);
-    log::trace!("load_addr_offset    = {:#x?}", mem::load_offset());
 
-    let vec = vec![1, 2, 3];
-    let mut string = String::new();
-    write!(&mut string, "{:?}", &vec).unwrap();
+    env::init(bootloader_magic, bootloader_info_ptr);
+    env::print();
 
-    log::info!("AFTER logger init {vec:#x?}");
-    log::info!("string = {string:#x?}");
     stack::assert_sanity_checks();
 
     // break_stack();
@@ -66,6 +60,7 @@ extern "C" fn rust_entry(
 #[allow(unused,unconditional_recursion)]
 #[inline(never)]
 fn break_stack() {
+    log::debug!("Breaking stack ...");
     stack::assert_sanity_checks();
     log::debug!("stack usage: {:#.2?}", stack::usage());
     break_stack();
@@ -74,6 +69,7 @@ fn break_stack() {
 /// Sometimes useful to test the binary.
 #[allow(unused)]
 fn create_pagefault() {
+    log::debug!("Creating page fault ...");
     let ptr = core::ptr::null::<u8>();
     unsafe {
         black_box(core::ptr::read_volatile(ptr));

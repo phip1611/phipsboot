@@ -46,6 +46,18 @@ macro_rules! impl_addr {
             }
         }
 
+        impl From<*const u8> for $typ {
+            fn from(val: *const u8) -> Self {
+                Self::new(val as u64)
+            }
+        }
+
+        impl From<$typ> for *const u8 {
+            fn from(val: $typ) -> Self {
+                (val.0 as u64) as *const u8
+            }
+        }
+
         impl From<i64> for $typ {
             fn from(val: i64) -> Self {
                 Self::new(val as u64)

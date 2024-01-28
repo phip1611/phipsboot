@@ -5,22 +5,20 @@
 //! So, either the type has to be en array or `core::ptr::addr_of!(SYMBOL)` is
 //! required.
 
-
 #[allow(unused)]
 #[allow(unused)]
-pub use {
-    bootcode::*,
-    other::*,
-};
+pub use {bootcode::*, other::*};
 
-/// Trace-print all relevant symbols.
-pub fn trace() {
-    log::trace!("boot_mem_pt_l4    = {:?}", boot_mem_pt_l4());
-    log::trace!("boot_mem_pt_l3_hi = {:?}", boot_mem_pt_l3_hi());
-    log::trace!("boot_mem_pt_l3_lo = {:?}", boot_mem_pt_l3_lo());
-    log::trace!("boot_mem_pt_l2_hi = {:?}", boot_mem_pt_l2_hi());
-    log::trace!("boot_mem_pt_l2_lo = {:?}", boot_mem_pt_l2_lo());
-    log::trace!("boot_mem_pt_l1_hi = {:?}", boot_mem_pt_l1_hi());
+/// Translates the low link address of a symbol to its high link address.
+///
+/// Background: Because of the 2 MiB huge identity mapping of the low-level code
+/// every symbol is in two address spaces. However, only the high address spaces
+/// have proper access permissions.
+pub fn boot_symbol_to_high_address(addr: *const u8) -> *const u8 {
+    // calculate offset regarding the 2 MiB-aligned base. We know that the
+    // whole binary is <= 2 MiB in size.
+    let offset = addr as u64 & 0x2fffff;
+    unsafe { link_addr_high_base().add(offset as usize) }
 }
 
 /// Symbols with their link address from the boot code.
@@ -79,14 +77,39 @@ mod other {
     use super::*;
 
     extern "C" {
-        /// The link address of the boot code.
         #[link_name = "LINK_ADDR_BOOT"]
         static LINK_ADDR_BOOT: [u64; 0];
 
-        /// The link address of the loader code.
-        #[link_name = "LINK_ADDR_LOADER"]
-        static LINK_ADDR_LOADER: [u64; 0];
+        #[link_name = "LINK_ADDR_HIGH_BASE"]
+        static LINK_ADDR_HIGH_BASE: [u64; 0];
+
+        #[link_name = "LINK_ADDR_RX"]
+        static LINK_ADDR_RX: [u64; 0];
+
+        #[link_name = "LINK_ADDR_RO"]
+        static LINK_ADDR_RO: [u64; 0];
+
+        #[link_name = "LINK_ADDR_RW"]
+        static LINK_ADDR_RW: [u64; 0];
     }
 
+    pub fn link_addr_boot() -> *const u8 {
+        (unsafe { LINK_ADDR_BOOT.as_ptr() }).cast()
+    }
 
+    pub fn link_addr_high_base() -> *const u8 {
+        (unsafe { LINK_ADDR_HIGH_BASE.as_ptr() }).cast()
+    }
+
+    pub fn link_addr_rx() -> *const u8 {
+        (unsafe { LINK_ADDR_RX.as_ptr() }).cast()
+    }
+
+    pub fn link_addr_ro() -> *const u8 {
+        (unsafe { LINK_ADDR_RO.as_ptr() }).cast()
+    }
+
+    pub fn link_addr_rw() -> *const u8 {
+        (unsafe { LINK_ADDR_RW.as_ptr() }).cast()
+    }
 }
