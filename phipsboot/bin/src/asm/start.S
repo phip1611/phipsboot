@@ -31,6 +31,13 @@ start:
     mov  %ebx, %esi
 
     # #############################################################
+    # Enable FPU, SSE, and FXSAVE
+    mov  %cr0,     %eax
+    and  $0xfffb,  %ax     # clear coprocessor emulation CR0.EM
+    M_SET_CR_BITS  %cr0 CR0_MP
+    M_SET_CR_BITS  %cr4 (CR4_OSFXSR | CR4_OSXMMEXCPT)
+
+    # #############################################################
     # Find relocation offset and store it in %ebp
 
     mov   (%ebx), %eax   # Save first 4 bytes of MBI.
@@ -61,26 +68,26 @@ start:
     # Prepare page tables
     #
     # Flags:
-    # -  0x3: present + writeable
-    # - 0x83: present + writeable, huge page
-    #
-    # Structure:
-    # L4 -> L3 (lo) -> L2 (lo) -> 2 MiB r+x idendity mapping of boot code
-    #   \-> L3 (hi) -> L2 (hi) -> L1 (hi) -> x rx mappings of RX segment
-    #                                    \-> x ro mappings of RO segment
-    #                                    \-> x rw mappings of RW segment
+    # -  0x1     : present
+    # - 0x81     : present, huge page
+    # -  0x3     : present + writeable
+    # - (1 << 63): no execute
 
-    # Create identity mapping.
+    # Create 2 MiB huge page identity mapping.
+    # This way, we can access all relevant data from the boot code. The mapping
+    # is r/o for safety reasons. Hence, we can not write to memory from the
+    # boot code once we entered 64-bit mode.
     M_MAP_SYMBOL32  4 LINK_ADDR_BOOT boot_mem_pt_l4 boot_mem_pt_l3_lo 0x1
     M_MAP_SYMBOL32  3 LINK_ADDR_BOOT boot_mem_pt_l3_lo boot_mem_pt_l2_lo 0x1
     M_MAP_SYMBOL32  2 LINK_ADDR_BOOT boot_mem_pt_l2_lo LINK_ADDR_BOOT 0x81
 
-
-    # common mappings for all segments
+    # Mappings for all high-level code segments (code, data, ro-data).
+    # At this level RX, RO, and RW have the same page-table index.
     M_MAP_HIGH_ADDR  4 LINK_ADDR_RX_PTR boot_mem_pt_l4 boot_mem_pt_l3_hi 0x3
-    M_MAP_HIGH_ADDR  3 LINK_ADDR_RO_PTR boot_mem_pt_l3_hi boot_mem_pt_l2_hi 0x3
-    M_MAP_HIGH_ADDR  2 LINK_ADDR_RW_PTR boot_mem_pt_l2_hi boot_mem_pt_l1_hi 0x3
+    M_MAP_HIGH_ADDR  3 LINK_ADDR_RX_PTR boot_mem_pt_l3_hi boot_mem_pt_l2_hi 0x3
+    M_MAP_HIGH_ADDR  2 LINK_ADDR_RX_PTR boot_mem_pt_l2_hi boot_mem_pt_l1_hi 0x3
 
+    # At this level, page-table levels of RX, RO, and RW differ.
     M_MAP_HIGH_ADDR  1 LINK_ADDR_RX_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT 0x1
     M_MAP_HIGH_ADDR  1 LINK_ADDR_RO_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT (1 << 63 | 0x1)
     M_MAP_HIGH_ADDR  1 LINK_ADDR_RW_PTR boot_mem_pt_l1_hi LINK_ADDR_BOOT (1 << 63 | 0x3)
@@ -105,7 +112,7 @@ start:
     M_SET_CR_BITS %cr4, CR4_PAE
 
     # Finally activate paging.
-    M_SET_CR_BITS %cr0, CR0_BITS
+    M_SET_CR_BITS %cr0, (CR0_PE | CR0_WP | CR0_PG)
 
     # Now, we are in 64-bit compatibility mode with 4-level paging. The code
     # running right now is identity mapped.
@@ -142,7 +149,7 @@ bit64_trampoline:
 
 .section .boot.data, "a", @progbits
 
-.align 4
+.balign 4
 # Input data for the ldgdt instruction which takes a 6-byte sequence:
 # the size (2 byte) and the location (4 byte) of the GDT.
 ldt_gdt_data:
@@ -153,6 +160,8 @@ gdt_ptr:    .quad 0     # this location will be updated during runtime to reflec
 # Provide mapping metadata info for the boot code.
 # This way, the assembly code can access these symbols that come from the linker
 # and operate with 64-bit values even in 32-bit mode.
+
+.balign 8
 LINK_ADDR_RX_PTR:   .quad LINK_ADDR_RX
                     .long COUNT_PAGES_RX
 LINK_ADDR_RO_PTR:   .quad LINK_ADDR_RO
@@ -161,7 +170,7 @@ LINK_ADDR_RW_PTR:   .quad LINK_ADDR_RW
                     .long COUNT_PAGES_RW
 
 # Global Descriptor Table (GDT)
-.align 8
+.balign 8
 gdt:
     # null selector
     .long 0
@@ -174,32 +183,32 @@ gdt_end:
 
 # Page tables backing memory
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l4
 boot_mem_pt_l4:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l3_lo
 boot_mem_pt_l3_lo:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l3_hi
 boot_mem_pt_l3_hi:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l2_lo
 boot_mem_pt_l2_lo:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l2_hi
 boot_mem_pt_l2_hi:
     .zero 4096
 
-.align 4096
+.balign 4096
 .global boot_mem_pt_l1_hi
 boot_mem_pt_l1_hi:
     .zero 4096

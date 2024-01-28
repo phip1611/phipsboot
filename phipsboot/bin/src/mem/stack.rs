@@ -1,4 +1,3 @@
-use core::fmt::{Debug};
 use lib::mem::stack::{Stack, DEFAULT_STACK_SIZE};
 use lib::safe::Safe;
 
@@ -56,7 +55,9 @@ pub fn usage() -> u64 {
     top() as u64 - current_rsp
 }
 
-/// Returns the current canary.
-pub fn canary() -> u64 {
-    unsafe { STACK.canary() }
+/// Returns the current stack usage in percent.
+#[inline(never)]
+#[allow(unused)]
+pub fn usage_percent() -> f32 {
+    usage() as f32 / usable_size() as f32
 }

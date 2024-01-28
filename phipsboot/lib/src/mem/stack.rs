@@ -58,17 +58,18 @@ impl<const SIZE: usize> Stack<SIZE> {
         self.stack.as_ptr().cast_mut()
     }
 
-    /// Returns the current canary.
+    /// Returns the current value from the stack at the position where the
+    /// canary is supposed to be.
     #[inline(never)]
-    pub const fn canary(&self) -> u64 {
-        self.canary
+    pub fn current_canary(&self) -> u64 {
+        unsafe { core::ptr::read_volatile(core::ptr::addr_of!(self.canary)) }
     }
 
     /// Verifies if the canary is still correct.
     #[inline(never)]
     pub fn check_canary(&self) -> Result<(), CanaryMissmatchError> {
         // volatile: make sure that compiler never optimizes this away
-        let actual = unsafe { core::ptr::read_volatile(core::ptr::addr_of!(self.canary)) };
+        let actual = self.current_canary();
         (actual == CANARY).then(|| ()).ok_or(CanaryMissmatchError {
             expected: CANARY,
             actual,

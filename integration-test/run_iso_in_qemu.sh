@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 
-# This script starts a bootable image in QEMU using legacy BIOS boot.
+# @describe Starts QEMU with a legacy-BIOS-bootable iso image.
+#
+# @option --iso! Path to bootable image
 
-# http://redsymbol.net/articles/unofficial-bash-strict-mode/
 set -euo pipefail
-IFS=$'\n\t'
 
-DIR=$(dirname "$(realpath "$0")")
-cd "$DIR" || exit
-
-BOOT_IMAGE="grub_boot.img"
+eval "$(argc --argc-eval "$0" "$@")"
 
 # add "-d int \" to debug CPU exceptions
 # "-display none" is necessary for the CI but locally the display and the
@@ -20,7 +17,7 @@ qemu-system-x86_64 \
     `#-s -S` \
     "-d" "int,cpu_reset" \
     -boot d \
-    -cdrom "$BOOT_IMAGE" \
+    -cdrom "$argc_iso" \
     -m 32m \
     -debugcon stdio \
     -no-reboot \

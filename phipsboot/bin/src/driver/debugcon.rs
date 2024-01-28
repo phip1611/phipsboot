@@ -1,4 +1,4 @@
-use core::fmt::{Formatter, Write};
+use core::fmt::{Write};
 
 const QEMU_DEBUGCON_PORT: u16 = 0xe9;
 
