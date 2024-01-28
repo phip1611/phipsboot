@@ -23,7 +23,7 @@ PHDRS
     rw     PT_LOAD FLAGS(6);
 }
 
-LINK_ADDR_BOOT = 0x200000;
+LINK_ADDR_BOOT = 0x400000;
 /*
  * LINK=LOAD addr of boot code enables to calculate the relocation offset in
  + physical memory during runtime.

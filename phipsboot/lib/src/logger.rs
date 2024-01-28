@@ -55,7 +55,7 @@ pub struct BackendAlreadySpecifiedError<B: Backend>(B);
 fn format_and_write_log_msg(writer: &mut dyn Write, record: &Record) -> core::fmt::Result {
     writeln!(
         writer,
-        "[{:>5} {}@{}]: {}",
+        "[{:>5} {}@{:03}]: {}",
         record.level(),
         record.file().unwrap_or("<unknown>"),
         record.line().unwrap_or(0),
