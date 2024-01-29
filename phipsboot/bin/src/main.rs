@@ -44,6 +44,7 @@ extern "C" fn rust_entry64(
     mem::init(load_addr_offset);
     logger::init(); // after mem init; logger depends on heap!
     logger::add_backend(driver::DebugconLogger::default()).unwrap();
+    logger::add_backend(driver::SerialLogger::default()).unwrap();
     logger::flush(); // flush all buffered messages
 
     env::init(bootloader_magic, bootloader_info_ptr);

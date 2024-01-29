@@ -40,6 +40,8 @@ integration-test: phipsboot
 	cd integration-test && ./run_iso_in_qemu.sh --iso="$(BUILD_DIR)/phipsboot.grub-mb2.iso"
 
 
+# TODO add targets for qemu and cloud hypervisor
+
 .PHONY: clean
 clean:
 	cd phipsboot && cargo clean
