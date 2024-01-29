@@ -1,12 +1,11 @@
 //! Abstraction for managing memory of the system and the loader.
 
-
 use core::cell::OnceCell;
 use lib::mem::paging::{PhysAddr, VirtAddr};
-use lib::safe::{Safe};
+use lib::safe::Safe;
 
-pub mod stack;
 mod heap;
+pub mod stack;
 
 /// Stores the load offset of the loader in physical memory.
 static ONCE: Safe<OnceCell<i64>> = Safe::new(OnceCell::new());

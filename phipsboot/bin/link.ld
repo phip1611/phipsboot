@@ -1,5 +1,5 @@
 /* Symbol from assembly boot code. */
-ENTRY(start)
+ENTRY(entry_common)
 
 /*
  * FORMAT/ARCH: It's hard to find the right names for this. Keyword: "bfdname".
@@ -21,12 +21,18 @@ PHDRS
     rx     PT_LOAD FLAGS(5);
     ro     PT_LOAD FLAGS(4);
     rw     PT_LOAD FLAGS(6);
+    note   PT_NOTE;
 }
 
-LINK_ADDR_BOOT = 0x400000;
+LINK_ADDR_BOOT = 0x400000; /* 4 MiB */
 /*
- * LINK=LOAD addr of boot code enables to calculate the relocation offset in
- + physical memory during runtime.
+ * We set these to be equal as everything else just creates confusion.
+ * With Multiboot 1 and Xen PVH, we will be loaded at that address, as
+ * bootloaders such as GRUB use the load address of an segment when paging is
+ * not active.
+ *
+ * With Multiboot 2, the bootloader might relocate us due to the relocatable
+ * tag.
  */
 LOAD_ADDR_BOOT = LINK_ADDR_BOOT;
 
@@ -36,9 +42,14 @@ LOAD_ADDR_BOOT = LINK_ADDR_BOOT;
 LINK_ADDR_HIGH_BASE = 0xffffffff88200000;
 
 /*
- * Ensure that all segments have the same link and load address offset from the
- * base address of the first LOAD segment. This way, the position of all symbols
- * in physical memory can be easily calculated from their virtual/link address.
+ * Ensure that all LOAD segments are continuous in memory and that they have the
+ * same link and load address offset from the base address of the first LOAD
+ * segment.
+ *
+ * This way, we can
+ * - properly create page-tables (alignment of virt and phys address must match)
+ * - calculate the position of all symbols in physical memory from their
+ *   virtual/link address
  */
 LINK_ADDR_RX = ALIGN(LINK_ADDR_HIGH_BASE + SIZEOF(.boot), 4K);
 LOAD_ADDR_RX = ALIGN(LOAD_ADDR_BOOT + SIZEOF(.boot), 4K);
@@ -95,6 +106,9 @@ SECTIONS {
 
     BIN_SIZE = . - LINK_ADDR_HIGH_BASE;
 
+    .note : {
+        *(.note .note.*)
+    } : note
 
     /*
      * General Assertions

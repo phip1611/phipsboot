@@ -1,5 +1,5 @@
-use std::fmt::Write;
 use lib::logger::Backend;
+use std::fmt::Write;
 
 #[derive(Debug)]
 struct StdoutBackend;

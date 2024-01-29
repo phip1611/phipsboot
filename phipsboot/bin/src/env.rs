@@ -6,9 +6,7 @@ enum BootVariant {
     XenPvh(*const u8),
 }
 
-pub fn init(
-    _bootloader_magic: u64,
-    _bootloader_info_ptr: u64,) {
+pub fn init(_bootloader_magic: u64, _bootloader_info_ptr: u64) {
     /*if (bootloader_magic == multiboot2::MAGIC) {
 
     } else if (bootloader_magic == )*/

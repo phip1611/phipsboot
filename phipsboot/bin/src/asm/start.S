@@ -8,18 +8,27 @@
 # - %ebp will contain the load address offset during runtime
 # - All other 32-bit registers can be used as general purpose registers
 
-.extern rust_entry STACK_TOP
-
 .code32
 .section .boot.text, "ax", @progbits
 
-# Entry into the loader. This "boot code" is fully position-independent. This
+.global entry_xenpvh
+entry_xenpvh:
+    # Save Xen boot info in %esi and put PVH magic in %edi.
+    # Now, the registr state is equal to a multiboot boot flow.
+    mov  (%ebx), %edi
+    mov  %ebx,   %esi
+
+
+# Entry into the loader in 32-bit protected mode without paging. This entry
+# equals the i386 machine state of Multiboot2.
+#
+# This "boot code" is fully position-independent. This
 # way, the loader can cope with physical relocations when it is loaded by a
 # Multiboot2 loader (such as GRUB) even though the ELF file is a static
 # executable without any relocation information. Where necessary, instructions
 # are patched during runtime to cope with relocations.
-.global start
-start:
+.global entry_common
+entry_common:
     # #############################################################
     # Clear interrupts. They should never be activated at this point anyway.
     cli
@@ -46,8 +55,8 @@ start:
     1:
     pop  %ebp
     sub  $1b,     %ebp   # %ebp now contains load offset (i32, i.e., pos or neg)
-                         # that can be added to known (link = load address)-
-                         # addresses to get the actual address.
+                         # that can be added to known link addresses to get the
+                         # actual address.
     mov  %eax,    (%ebx) # Restore first 4 bytes of MBI.
 
     # #############################################################
@@ -140,9 +149,9 @@ bit64_trampoline:
     movsx  %ebp, %rdx  # 3rd param: Load offset: sign extend if negative
 
     # Set stack
-    mov  (STACK_TOP_PTR), %rsp  # set the aligned stack top ptr as stack
+    mov  (STACK_TOP_PTR),  %rsp  # set the aligned stack top ptr as stack
 
-    movabs  $rust_entry, %rax
+    movabs  $rust_entry64, %rax
     jmp  *%rax  # Absolute jump to link address of high-level code.
     ud2
 

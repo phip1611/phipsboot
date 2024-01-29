@@ -85,7 +85,10 @@ mod tests {
     #[test]
     fn abi() {
         assert_eq!(align_of::<Stack>(), ALIGNMENT);
-        assert_eq!(size_of::<Stack<8>>(), size_of::<u64>() + 8 * size_of::<u8>());
+        assert_eq!(
+            size_of::<Stack<8>>(),
+            size_of::<u64>() + 8 * size_of::<u8>()
+        );
     }
 
     #[test]
@@ -115,6 +118,6 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_small_stack_is_invalid() {
-        let _stack = Stack::<{ALIGNMENT - 1}>::new();
+        let _stack = Stack::<{ ALIGNMENT - 1 }>::new();
     }
 }

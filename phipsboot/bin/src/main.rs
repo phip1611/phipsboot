@@ -10,10 +10,11 @@ extern crate alloc;
 
 mod asm;
 mod driver;
+mod env;
 mod extern_symbols;
 mod idt;
 mod mem;
-mod env;
+mod xen_pvh;
 
 use crate::mem::stack;
 use core::fmt::Write;
@@ -33,7 +34,7 @@ use lib::logger;
 /// The hole loader is reachable via its link address (2 MiB mapping) and via
 /// an identity mapping of the physical location in memory.
 #[no_mangle]
-extern "C" fn rust_entry(
+extern "C" fn rust_entry64(
     bootloader_magic: u64,
     bootloader_info_ptr: u64,
     load_addr_offset: i64,
@@ -57,7 +58,7 @@ extern "C" fn rust_entry(
 }
 
 /// Sometimes useful to test the stack + stack canary.
-#[allow(unused,unconditional_recursion)]
+#[allow(unused, unconditional_recursion)]
 #[inline(never)]
 fn break_stack() {
     log::debug!("Breaking stack ...");

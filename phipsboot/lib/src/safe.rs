@@ -1,6 +1,6 @@
 //! Module for [`Safe`].
 
-use core::ops::{Deref};
+use core::ops::Deref;
 
 /// Smart pointer that marks the inner type as [`Send`] and [`Sync`]. This is
 /// useful as wrapper for global statics, if the inner type alone is usually not
@@ -26,7 +26,6 @@ impl<T> Deref for Safe<T> {
 
 unsafe impl<T> Send for Safe<T> {}
 unsafe impl<T> Sync for Safe<T> {}
-
 
 #[cfg(test)]
 mod tests {

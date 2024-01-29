@@ -8,6 +8,9 @@ main contribution IMHO is how the binary is assembled and that the thing boots
 with all the properties described below, but not the high-level functionality
 itself._
 
+_I am especially proud of the well-commented structure of the assembly files
+and the linker script. I hope this can be a learning resource for others!_
+
 _Further: This is a rather niche use-case, especially in 2024._
 
 PhipsBoot is a relocatable x86_64 bootloader for legacy boot written in Rust
@@ -61,6 +64,8 @@ config.
 
 - General description about the architecture: [ARCHITECTURE.md](phipsboot/ARCHITECTURE.md)
 - Build and run test: `$ make && make integration-test`
+
+Artifacts are in `./build`.
 
 ## User Guide
 

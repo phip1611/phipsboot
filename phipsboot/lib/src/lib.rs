@@ -4,7 +4,7 @@ extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
-pub mod safe;
 pub mod cli;
-pub mod mem;
 pub mod logger;
+pub mod mem;
+pub mod safe;
