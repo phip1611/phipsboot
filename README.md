@@ -71,6 +71,22 @@ Artifacts are in `./build`.
 
 ## User Guide
 
+### Supported Boot Environments
+
+PhipsBoot expects an 32-bit protected mode without paging machine state at is
+entry. This corresponds to the Multiboot2 i386 machine state definition.
+PhipsBoot itself can be booted via:
+- Multiboot1
+- Multiboot2
+- Xen PVH
+
+### Boot PhipsBoot (for testing)
+
+You have multiple options, for example:
+
+- `$ cloud-hypervisor --debug-console file=log.txt --kernel ./build/phipsboot.elf64` (using Xen PVH)
+- `$ qemu-system-x86_64 -kernel ./build/phipsboot.elf32 -debugcon stdio` (using Multiboot 1)
+
 ### Supported Kernel Payloads
 
 Supported payloads that PhipsBoot can boot are ELF executables (static and dyn).
