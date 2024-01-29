@@ -1,35 +1,36 @@
 # PhipsBoot
 
-PhipsBoot is an x86_64 chainloader that is relocatable in physical memory. This
-means that it doesn't need to be loaded at the load address specified in the ELF
-file. It automatically discovers whether it was relocated.
+⚠️ Work in progress. ⚠️
 
-PhipsBoot can be booted via Multiboot1, Multiboot2, and XEN PVH. However,
-it's main benefit comes out when it is chainload by GRUB via Multiboot2 in
-legacy BIOS boot systems.
+Disclaimer: _This project combines a lot of toolchain and binary knowledge and
+experience I collected and gained in recent years about legacy x86_64 boot. The
+main contribution IMHO is how the binary is assembled and that the thing boots
+with all the properties described below, but not the high-level functionality
+itself._
+
+PhipsBoot is a relocatable x86_64 bootloader for legacy boot written in Rust
+and assembly. It is intended to be loaded by GRUB via Multiboot2, but also
+supports Multiboot1 and XEN PVH entries. However, its main benefit comes out
+when it is loaded by GRUB via Multiboot2 in legacy BIOS boot systems, where it
+can be relocated in physical memory, although the kernel binary is a static ELF.
 
 ## TL;DR: What does PhipsBoot do?
 
-It boots your x86_64 kernel in ELF format at its desired virtual address and
-performs the handoff in 64-bit long mode but takes away a lot of boot-related
-x86_64 complexity away from you.
+It boots your x86_64 kernel in ELF format and performs the handoff in 64-bit
+long mode. PhipsBoot abstracts a lot of boot-related x86_64 complexity away from
+your kernel.
 
-### Binary Formats of PhipsBoot
+## About
 
-The build itself produces `phipsboot.elf32` and `phipsboot.elf64`. Both are
-identical except for the ELF header. You usually always want to use the `.elf64`
-version except for when booting it via Multiboot1, where compliant bootloaders
-only accept 32-bit ELFs.
+### Why Relying On GRUB + Multiboot2?
 
-<!--
-Furthermore, the build also produces a `.iso` variant that is bootable on
-legacy BIOS systems. The `.iso` variant uses a GRUB standalone image that
-chainloads PhipsBoot via Multiboot 2. GRUB2 will physically relocate PhipsBoot.
-The `.iso` variant is used for testing and for you as inspiration for on how
-you can package PhipsBoot along with your kernel.
--->
+[Effectively](https://phip1611.de/blog/x86-kernel-development-relocatable-binaries/),
+in the open-source world you are limited to GRUB when you want to boot your
+kernel on legacy BIOS x86_64 systems. To reuse all the abstractions and hidden
+complexity that GRUB comes with, PhipsBoot can be much simpler and easier to
+program, install, and use.
 
-## Which problems does PhipsBoot solve?
+### Which problems does PhipsBoot solve?
 
 It solves several problems every 64-bit kernel has to perform anyway, such as
 performing the transition into 64-bit long mode while also being relocatable in
@@ -39,68 +40,95 @@ build setup and boot code as much complexity is outsourced to PhipsBoot, such as
 several CPU state transitions and intermediate identity page mappings.
 
 By far the biggest contribution of PhipsBoot is that it is relocatable in
-physical memory but jumps into code compiled from a high-level language as soon
-as possible. For that, you need position-independent code at the beginning and
-to a certain degree also live-patching during runtime so that all instructions
-find the data they need at the right place.
+physical memory when it is loaded by GRUB. Here, you can read more of the
+[overall challenges](https://phip1611.de/blog/x86-kernel-development-relocatable-binaries/).
 
-To my knowledge, only [NOVA](https://hypervisor.org/) and [Hedron](https://github.com/cyberus-technology/hedron)
-perform a similar complicated setup to get all the flexibility of being
-physically relocatable.
+All high-level logic is written in modern Rust.
 
-While it is easy to create a suited bootloader as EFI app on an UEFI platform,
-on a legacy system you are most likely limited to GRUB with a Multiboot2 handoff
-for a convenient boot flow for your OS project. This is where PhipsBoot helps
-with all the benefits described above.
+### Related Projects
 
-## Machine State before and after PhipsBoot is done
+One can also write
+an [entire legacy BIOS bootloader in Rust](https://github.com/rust-osdev/bootloader),
+sure! That's awesome! However, installing legacy BIOS stage 1 bootloaders on
+disk is much more complicated, as one has to patch the MBR instead of just
+putting a file on disk. By using GRUB however, it is relatively easy to put
+PhipsBoot or other Multiboot payloads on disk and reference them from the GRUB
+config.
 
-PhipsBoot starts in _I386 machine state_ (see Multiboot2 spec) and loads a
-provided ELF binary (an actual kernel) into memory at its desired link address.
-The kernel payload sees a handoff similar to the `I386 machine state` state,
-except that the Bootstrap Processor (BSP) is in 64-bit long mode. Hence, the
-handoff to the kernel can happen at a high address such as `0xffffffff88000000`
-and your kernel doesn't need to do that transition to 64-bit long mode
-and loading itself where to the location it wants to be all by itself.
+## Developer Guide
 
-## Handoff to your kernel
+- General description about the architecture: [ARCHITECTURE.md](phipsboot/ARCHITECTURE.md)
+- Build and run test: `$ make && make integration-test`
 
-Your loaded kernel receives a boot information structure passed at handoff. This is similar
-to the Multiboot2 information that the PhipsBoot receives by GRUB but
-enhanced with more info about the load environment.
+## User Guide
 
-## Why Relying On Multiboot2 / GRUB?
+### Supported Kernel Payloads
 
-It is a chainloader rather than a "full" bootloader to benefit from all the
-complexity GRUB already takes away from us. GRUB is the most popular
-Multiboot2-compatible bootloader out there. With my chainloader, every OS
-project that wants to target legacy systems can just use this chainloader and
-also reuse GRUB.
+Supported payloads that PhipsBoot can boot are ELF executables (static and dyn).
+The hand-off to the kernel follows the PhipsBoot protocol.
 
-### Final Machine State
+### PhipsBoot protocol
 
+This protocol describes the hardware state and the handover to your kernel when
+it is booted by PhipsBoot.
+
+#### Kernel Entry
+
+The kernel entry is taken from the ELF entry. It is invoked using the SystemV
+x86_64 calling convention. First argument passed to your kernel is a point to
+the boot information.
+
+#### Machine State after hand-off
+
+- PhipsBoot is still mapped and occupies (at most) 2 MiB of virtual address
+  space
 - BSP in 64-bit long mode with 4-level paging
-- All load segments of the kernel are loaded via 2 MiB huge-page mapping with
-  their corresponding page-table rights.
 - APs are still asleep
-- Register `%rdi` has pointer to PhipsBoot boot information
-  - This includes the memory map
-- `CR0` has the following bits set: PE (0), WP (1), PG (31)
-- `CR3` holds the physical address of the root page table
-- `CR4` has the following bits set: PAE (5)
-- GDT living in the address space of the loader is set with two selectors:
-  null selector and a (64-bit, code segment, ring 0)-selector
+- control registers
+    - `%cr0`: PE (0), MP (1), WP (16), PG (31)
+    - `%cr4`: PAE (5), OSFXSR (9), OSXMMEXCPT (10)
+    - `%cr3`: holds the physical address of the root page table
+- MSRs
+    - `efer`: LME (8), NX (11)
+- GDT, which is living in the physical address space of PhipsBoot, is set with
+  two selectors:
+    - null selector
+    - (64-bit, code segment, ring 0)-selector
+- `%rsp` is set to a valid 128 KiB stack
+- `%rdi` has pointer to boot information
+- All load segments of the kernel are loaded with their corresponding page-table
+  rights. The NX bits are set for all non-executable LOAD segments.
 
-## Supported Kernel Payloads & How Does PhipsBoot Find Your Kernel
+#### Boot Information
 
-TODO
+TODO implement
+
+### Booting Your Kernel with PhipsBoot
+
+TODO implement
+
+You can use the following GRUB configuration:
 
 ```
 menuentry "Kernel" {
-    multiboot2 /PhipsBoot load=foo-kernel
-    # This adds "foo-kernel" to the cmdline of this boot module and the loader
-    # knows which file to load.
-    module2 /foo-kernel foo-kernel
+    multiboot2 /phipsboot
+    module2 /your-kernel
     boot
 }
 ```
+
+#### Binary Formats of PhipsBoot
+
+The build itself produces `phipsboot.elf32` and `phipsboot.elf64`. Both are
+identical except for the ELF header. You usually always want to use the `.elf64`
+version except for when booting it via Multiboot1, where compliant bootloaders
+only accept 32-bit ELFs.
+
+<!--
+TODO
+Furthermore, the build also produces a `.iso` variant that is bootable on
+legacy BIOS systems. The `.iso` variant uses a GRUB standalone image that
+chainloads PhipsBoot via Multiboot 2. GRUB2 will physically relocate PhipsBoot.
+The `.iso` variant is used for testing and for you as inspiration for on how
+you can package PhipsBoot along with your kernel.
+-->

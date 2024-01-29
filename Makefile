@@ -4,7 +4,7 @@ BUILD_DIR = $(ROOT)/build
 CARGO_BUILD_STD_FLAGS = -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem
 
 PHIPSBOOT_SRC = $(ROOT)/phipsboot
-PHIPSBOOT_RUSTFLAGS = -C relocation-model=static -C target-cpu=x86-64 -C code-model=large
+PHIPSBOOT_RUSTFLAGS = -C target-cpu=x86-64
 PHIPSBOOT_RUST_TARGET = x86_64-unknown-none-static
 PHIPSBOOT_RUST_TARGET_FILE = $(PHIPSBOOT_SRC)/bin/$(PHIPSBOOT_RUST_TARGET).json
 PHIPSBOOT_CARGO_FLAGS = --verbose --target $(PHIPSBOOT_RUST_TARGET_FILE) $(CARGO_BUILD_STD_FLAGS)

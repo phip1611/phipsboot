@@ -133,7 +133,7 @@
 
 
 /**
- * Takes a 32-bit symbol, calculates its actual runtime adress, and maps the
+ * Takes a 32-bit symbol, calculates its actual runtime address, and maps the
  * virtual address for the given level and the given flags.
  *
  * # Parameters

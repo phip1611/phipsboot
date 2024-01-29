@@ -14,7 +14,7 @@ pub const DEFAULT_STACK_SIZE: usize = 0x10000 /* 64 KiB */;
 
 /// Error that indicates the stack canary was violated.
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub struct CanaryMissmatchError {
+pub struct CanaryMismatchError {
     expected: u64,
     actual: u64,
 }
@@ -67,10 +67,10 @@ impl<const SIZE: usize> Stack<SIZE> {
 
     /// Verifies if the canary is still correct.
     #[inline(never)]
-    pub fn check_canary(&self) -> Result<(), CanaryMissmatchError> {
+    pub fn check_canary(&self) -> Result<(), CanaryMismatchError> {
         // volatile: make sure that compiler never optimizes this away
         let actual = self.current_canary();
-        (actual == CANARY).then(|| ()).ok_or(CanaryMissmatchError {
+        (actual == CANARY).then(|| ()).ok_or(CanaryMismatchError {
             expected: CANARY,
             actual,
         })
@@ -79,7 +79,7 @@ impl<const SIZE: usize> Stack<SIZE> {
 
 #[cfg(test)]
 mod tests {
-    use crate::mem::stack::{CanaryMissmatchError, Stack, ALIGNMENT, CANARY};
+    use crate::mem::stack::{CanaryMismatchError, Stack, ALIGNMENT, CANARY};
     use std::mem::{align_of, size_of};
 
     #[test]
@@ -94,7 +94,7 @@ mod tests {
         assert_eq!(Ok(()), stack.check_canary());
         stack.canary = 5;
         assert_eq!(
-            Err(CanaryMissmatchError {
+            Err(CanaryMismatchError {
                 expected: CANARY,
                 actual: 5,
             }),

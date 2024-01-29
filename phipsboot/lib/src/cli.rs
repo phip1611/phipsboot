@@ -1,6 +1,6 @@
 //! CLI parsing of the loader. The CLI looks like this:
 //!
-//! `[--load=modul-id-if-kernel] [--loggers=serial,debugcon]`
+//! `[--load=module-id-if-kernel] [--loggers=serial,debugcon]`
 
 use ::regex::Regex;
 use alloc::string::{String, ToString};
