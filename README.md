@@ -8,6 +8,8 @@ main contribution IMHO is how the binary is assembled and that the thing boots
 with all the properties described below, but not the high-level functionality
 itself._
 
+_Further: This is a rather niche use-case, especially in 2024._
+
 PhipsBoot is a relocatable x86_64 bootloader for legacy boot written in Rust
 and assembly. It is intended to be loaded by GRUB via Multiboot2, but also
 supports Multiboot1 and XEN PVH entries. However, its main benefit comes out
