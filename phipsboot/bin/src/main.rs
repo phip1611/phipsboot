@@ -51,6 +51,9 @@ extern "C" fn rust_entry64(
 
     stack::assert_sanity_checks();
 
+    log::info!("Now loading your kernel into 64-bit mode...");
+    log::info!("Not implemented yet! =(");
+
     // break_stack();
     create_pagefault();
 

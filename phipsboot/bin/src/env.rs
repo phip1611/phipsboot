@@ -15,7 +15,7 @@ enum BootVariant {
 
 pub fn init(bootloader_magic: u64, bootloader_info_ptr: u64) {
     let boot_variant;
-    if (bootloader_magic == multiboot2::MAGIC as u64) {
+    if bootloader_magic == multiboot2::MAGIC as u64 {
         boot_variant = BootVariant::Multiboot2;
     } else if bootloader_magic == 0x2badB002 {
         // TODO use constant from crate
