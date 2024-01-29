@@ -8,8 +8,10 @@ main contribution IMHO is how the binary is assembled and that the thing boots
 with all the properties described below, but not the high-level functionality
 itself._
 
-_I am especially proud of the well-commented structure of the assembly files
-and the linker script. I hope this can be a learning resource for others!_
+_I am especially proud of the well-commented structure of the assembly files.
+For example the whole page-table mappings are done IMHO very nicely even tho
+it is assembly language. Also, I think it turned out quite cool how I configured
+the linker script. I hope this can be a learning resource for others!_
 
 _Further: This is a rather niche use-case, especially in 2024._
 
