@@ -1,8 +1,15 @@
 # The assembly file uses GNU Assembly (GAS) language with AT&T syntax.
 
-# Multiboot2 Header definition.
+# Multiboot Header definition.
 
-.balign 8
+.section .mb1_hdr, "a", @progbits
+
+.balign 4  /* Header must be 4-byte aligned. */
+.long 0x1badb002 /* multiboot magic */
+.long 0x0        /* multiboot flags */
+.long (0x100000000 - 0x1badb002) /* multiboot checksum */
+
+
 .section .mb2_hdr, "a", @progbits
 
 .balign 8 /* Header must be 8-byte aligned. */

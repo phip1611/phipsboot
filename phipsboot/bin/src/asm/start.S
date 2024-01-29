@@ -13,11 +13,20 @@
 
 .global entry_xenpvh
 entry_xenpvh:
+    # #############################################################
     # Save Xen boot info in %esi and put PVH magic in %edi.
     # Now, the registr state is equal to a multiboot boot flow.
     mov  (%ebx), %edi
     mov  %ebx,   %esi
+    jmp  entry_common # relative jump
 
+.global entry_multiboot
+entry_multiboot:
+    # #############################################################
+    # Save Multiboot handoff parameters
+    # (%eax and %ebx are working registers in the following)
+    mov  %eax, %edi
+    mov  %ebx, %esi
 
 # Entry into the loader in 32-bit protected mode without paging. This entry
 # equals the i386 machine state of Multiboot2.
@@ -27,17 +36,10 @@ entry_xenpvh:
 # Multiboot2 loader (such as GRUB) even though the ELF file is a static
 # executable without any relocation information. Where necessary, instructions
 # are patched during runtime to cope with relocations.
-.global entry_common
 entry_common:
     # #############################################################
     # Clear interrupts. They should never be activated at this point anyway.
     cli
-
-    # #############################################################
-    # Save Multiboot2 handoff parameters
-    # (%eax and %ebx are working registers in the following)
-    mov  %eax, %edi
-    mov  %ebx, %esi
 
     # #############################################################
     # Enable FPU, SSE, and FXSAVE

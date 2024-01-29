@@ -1,5 +1,5 @@
 /* Symbol from assembly boot code. */
-ENTRY(entry_common)
+ENTRY(entry_multiboot)
 
 /*
  * FORMAT/ARCH: It's hard to find the right names for this. Keyword: "bfdname".
@@ -76,6 +76,7 @@ SECTIONS {
     .boot LINK_ADDR_BOOT : AT(LOAD_ADDR_BOOT) ALIGN(4k) {
         *(.boot.text)
         /* Push the header a little from the top to simplify `objdump`. */
+        KEEP(*(.mb1_hdr));
         KEEP(*(.mb2_hdr));
         *(.boot.data)
     } : boot

@@ -26,6 +26,7 @@ phipsboot: build_dir phipsboot_cargo
 phipsboot_cargo:
 	cd phipsboot && RUSTFLAGS="$(PHIPSBOOT_RUSTFLAGS)" cargo build $(PHIPSBOOT_CARGO_FLAGS)
 	cd phipsboot && RUSTFLAGS="$(PHIPSBOOT_RUSTFLAGS)" cargo build $(PHIPSBOOT_CARGO_FLAGS) --release
+	grub-file --is-x86-multiboot "$(PHIPSBOOT_CARGO_ARTIFACT)"
 	grub-file --is-x86-multiboot2 "$(PHIPSBOOT_CARGO_ARTIFACT)"
 	grub-file --is-x86-xen-dom0 "$(PHIPSBOOT_CARGO_ARTIFACT)" # Xen PVH
 
