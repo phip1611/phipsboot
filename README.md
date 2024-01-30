@@ -28,11 +28,14 @@ Multiboot1 and XEN PVH entries.
 
 ### Supported Boot Environments
 
-| Firmware  | Hand-Off by   | Status | Comments                                |
+PhipsBoot expects an 32-bit protected mode without paging machine state at is
+entry. This corresponds to the Multiboot2 i386 machine state definition.
+
+| Firmware  | Hand-Off by   | Status | Comment                                 |
 |-----------|---------------|--------|-----------------------------------------|
 | BIOS/UEFI | Firmware      | ❌      | Use existing projects as chainloader.   |
 | BIOS/UEFI | Multiboot 1/2 | ✅      | Recommended (BIOS + GRUB + Multiboot 2) |
-| *         | Xen PVH       | ✅      | 32-bit protected mode entry             |
+| *         | Xen PVH       | ✅      |                                         |
 
 
 ### Why Relying On GRUB + Multiboot2?
@@ -81,15 +84,6 @@ to be ugly. 🤓
 Artifacts are in `./build`.
 
 ## User Guide
-
-### Supported Boot Environments
-
-PhipsBoot expects an 32-bit protected mode without paging machine state at is
-entry. This corresponds to the Multiboot2 i386 machine state definition.
-PhipsBoot itself can be booted via:
-- Multiboot1
-- Multiboot2
-- Xen PVH
 
 ### Boot PhipsBoot (for testing)
 
