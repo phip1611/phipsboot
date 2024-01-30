@@ -59,15 +59,24 @@ By far the biggest contribution of PhipsBoot is that it is relocatable in
 physical memory when it is loaded by GRUB. Here, you can read more of the
 [overall challenges](https://phip1611.de/blog/x86-kernel-development-relocatable-binaries/).
 
-### Related Projects
+### Related Projects & Practical Alternatives
 
-One can also write
-an [entire legacy BIOS bootloader in Rust](https://github.com/rust-osdev/bootloader) when targeting legacy boot,
-sure. That's awesome! However, installing legacy BIOS stage 1 bootloaders on
+First of all: If you are targeting UEFI and only UEFI, you need none of this!
+The world is much simpler there. However, for legacy BIOS, the bootloader
+developer and user experience is just difficult. To not be forced to use GRUB,
+one can also write an
+[entire bootloader supporting legacy BIOS boot in Rust](https://github.com/rust-osdev/bootloaderz).
+That's awesome! However, installing legacy BIOS stage 1 bootloaders on
 disk is much more complicated, as one has to patch the MBR instead of just
 putting a file on disk. By using GRUB however, it is relatively easy to put
 PhipsBoot or other Multiboot payloads on disk and reference them from the GRUB
 config.
+
+If you are targeting legacy x86 boot and have the freedom to choose and install
+your own stage 1 bootloader, you can also have a look at
+[Limine](https://limine-bootloader.org/), which is superior to GRUB and
+production ready. It also brings your kernel into 64-bit mode right away, making
+PhipsBoot obsolete.
 
 ### Trivia
 
