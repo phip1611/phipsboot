@@ -15,16 +15,25 @@ the linker script. I hope this can be a learning resource for others!_
 
 _Further: This project is a solution for a niche use-case, especially in 2024._
 
-PhipsBoot is a relocatable x86_64 bootloader for legacy boot written in Rust
-and assembly that loads a kernel into 64-bit mode. It abstracts a lot of
-boot-related x86_64 complexity away.
+PhipsBoot is a relocatable x86_64 bootloader written in Rust and assembly that
+loads a kernel into 64-bit mode. It abstracts a lot of boot-related x86_64
+complexity away.
 
-It is intended to be loaded by GRUB via Multiboot2, but also supports Multiboot1
-and XEN PVH entries. However, its main advantage is seen when loaded by GRUB via
-Multiboot2 in legacy BIOS boot systems, where it can be relocated in physical
-memory even though the kernel binary is a static ELF.
+The main advantage of PhipsBoot is seen when loaded by GRUB via Multiboot2 in
+legacy BIOS boot systems, where it can be relocated in physical memory even
+though the kernel binary is a static ELF. However, PhipsBoot also supports
+Multiboot1 and XEN PVH entries.
 
 ## About
+
+### Supported Boot Environments
+
+| Firmware  | Hand-Off by   | Status | Comments                                |
+|-----------|---------------|--------|-----------------------------------------|
+| BIOS/UEFI | Firmware      | ❌      | Use existing projects as chainloader.   |
+| BIOS/UEFI | Multiboot 1/2 | ✅      | Recommended (BIOS + GRUB + Multiboot 2) |
+| *         | Xen PVH       | ✅      | 32-bit protected mode entry             |
+
 
 ### Why Relying On GRUB + Multiboot2?
 
@@ -47,17 +56,22 @@ By far the biggest contribution of PhipsBoot is that it is relocatable in
 physical memory when it is loaded by GRUB. Here, you can read more of the
 [overall challenges](https://phip1611.de/blog/x86-kernel-development-relocatable-binaries/).
 
-All high-level logic is written in modern Rust.
-
 ### Related Projects
 
 One can also write
-an [entire legacy BIOS bootloader in Rust](https://github.com/rust-osdev/bootloader),
-sure! That's awesome! However, installing legacy BIOS stage 1 bootloaders on
+an [entire legacy BIOS bootloader in Rust](https://github.com/rust-osdev/bootloader) when targeting legacy boot,
+sure. That's awesome! However, installing legacy BIOS stage 1 bootloaders on
 disk is much more complicated, as one has to patch the MBR instead of just
 putting a file on disk. By using GRUB however, it is relatively easy to put
 PhipsBoot or other Multiboot payloads on disk and reference them from the GRUB
 config.
+
+### Trivia
+
+I'm kind of proud of the way I set up page-tables from assembly using
+descriptive GNU as macros! I didn't see anything like that so far. IMHO it is
+a great approach as low-level programming and assembly doesn't necessarily has
+to be ugly. 🤓
 
 ## Developer Guide
 
