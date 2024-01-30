@@ -9,33 +9,30 @@ with all the properties described below, but not the high-level functionality
 itself._
 
 _I am especially proud of the well-commented structure of the assembly files.
-For example the whole page-table mappings are done IMHO very nicely even tho
+For example the whole page-table mappings are done IMHO very nicely even though
 it is assembly language. Also, I think it turned out quite cool how I configured
 the linker script. I hope this can be a learning resource for others!_
 
-_Further: This is a rather niche use-case, especially in 2024._
+_Further: This project is a solution for a niche use-case, especially in 2024._
 
 PhipsBoot is a relocatable x86_64 bootloader for legacy boot written in Rust
-and assembly. It is intended to be loaded by GRUB via Multiboot2, but also
-supports Multiboot1 and XEN PVH entries. However, its main benefit comes out
-when it is loaded by GRUB via Multiboot2 in legacy BIOS boot systems, where it
-can be relocated in physical memory, although the kernel binary is a static ELF.
+and assembly that loads a kernel into 64-bit mode. It abstracts a lot of
+boot-related x86_64 complexity away.
 
-## TL;DR: What does PhipsBoot do?
-
-It boots your x86_64 kernel in ELF format and performs the handoff in 64-bit
-long mode. PhipsBoot abstracts a lot of boot-related x86_64 complexity away from
-your kernel.
+It is intended to be loaded by GRUB via Multiboot2, but also supports Multiboot1
+and XEN PVH entries. However, its main advantage is seen when loaded by GRUB via
+Multiboot2 in legacy BIOS boot systems, where it can be relocated in physical
+memory even though the kernel binary is a static ELF.
 
 ## About
 
 ### Why Relying On GRUB + Multiboot2?
 
-[Effectively](https://phip1611.de/blog/x86-kernel-development-relocatable-binaries/),
-in the open-source world you are limited to GRUB when you want to boot your
-kernel on legacy BIOS x86_64 systems. To reuse all the abstractions and hidden
-complexity that GRUB comes with, PhipsBoot can be much simpler and easier to
-program, install, and use.
+Effectively, in the open-source world you are limited to GRUB when you want to
+boot your custom kernel on legacy BIOS x86_64 systems, while keeping up a
+certain level of user and developer experience. By reusing all the abstracted
+away complexity that GRUB comes with, PhipsBoot can be much simpler and easier
+to program, install, adopt, and use.
 
 ### Which problems does PhipsBoot solve?
 
