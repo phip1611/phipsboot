@@ -36,7 +36,7 @@ pub fn init(bootloader_magic: u64, bootloader_info_ptr: u64) {
 #[rustfmt::skip]
 pub fn print() {
     log::debug!("PhipsBoot was loaded via   {:?}", BOOT_VARIANT.get().unwrap());
-    log::debug!("          boot info ptr at {:#016x} (phys)", BOOT_INFO_PTR.get().unwrap());
+    log::debug!("              boot info at {:#016x} (phys)", BOOT_INFO_PTR.get().unwrap());
     log::debug!("          expected load at {:#016x} (phys)", crate::extern_symbols::link_addr_boot() as u64);
     log::debug!("            actual load at {:#016x} (phys)", load_addr());
     log::debug!("              with offset {}{:#x}",
