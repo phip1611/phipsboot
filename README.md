@@ -1,6 +1,6 @@
 # PhipsBoot
 
-⚠️ Work in progress. ⚠️
+⚠️ Work in progress. This is more proof-of-concept than production-ready. ⚠️
 
 Disclaimer: _This project combines a lot of toolchain and binary knowledge and
 experience I collected and gained in recent years about legacy x86_64 boot. The
